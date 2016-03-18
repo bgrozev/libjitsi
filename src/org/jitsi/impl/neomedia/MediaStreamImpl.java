@@ -1057,6 +1057,7 @@ public class MediaStreamImpl
         if (debugTransformEngine != null)
             engineChain.add(debugTransformEngine);
 
+        engineChain.add(new ChecksumEngine());
         // SRTP
         engineChain.add(srtpControl.getTransformEngine());
 
