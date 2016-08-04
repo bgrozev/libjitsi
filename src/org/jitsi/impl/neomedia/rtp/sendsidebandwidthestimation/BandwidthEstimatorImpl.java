@@ -202,4 +202,10 @@ public class BandwidthEstimatorImpl
         }
         return 0;
     }
+
+    @Override
+    public void setBandwidthEstimation(long value)
+    {
+        sendSideBandwidthEstimation.setBandwidthEstimation(value);
+    }
 }

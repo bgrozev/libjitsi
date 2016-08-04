@@ -23,6 +23,11 @@ public interface BandwidthEstimator
     public void addListener(Listener listener);
     public void removeListener(Listener listener);
 
+    /**
+     * Resets the bandwidth estimation to the given value.
+     */
+    public void setBandwidthEstimation(long value);
+
     public interface Listener
     {
         public void bandwidthEstimationChanged(long newValueBps);

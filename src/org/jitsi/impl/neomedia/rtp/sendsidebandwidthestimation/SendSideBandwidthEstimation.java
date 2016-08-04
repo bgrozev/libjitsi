@@ -343,6 +343,12 @@ class SendSideBandwidthEstimation
         }
     }
 
+    @Override
+    public void setBandwidthEstimation(long value)
+    {
+        setBitrate(capBitrateToThresholds(value));
+    }
+
     /**
      * {@inheritDoc}
      */
