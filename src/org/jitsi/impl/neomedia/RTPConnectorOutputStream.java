@@ -123,7 +123,7 @@ public abstract class RTPConnectorOutputStream
         POOL_CAPACITY = ConfigUtils.getInt(cfg, POOL_CAPACITY_PNAME, 100);
 
         AVERAGE_BITRATE_WINDOW_MS
-            = ConfigUtils.getInt(cfg, AVERAGE_BITRATE_WINDOW_MS_PNAME, 5000);
+            = ConfigUtils.getInt(cfg, AVERAGE_BITRATE_WINDOW_MS_PNAME, 2000);
 
         // Set PACKET_QUEUE_CAPACITY
         int packetQueueCapacity
