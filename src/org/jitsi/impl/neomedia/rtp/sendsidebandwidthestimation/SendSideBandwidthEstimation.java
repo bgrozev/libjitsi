@@ -137,8 +137,10 @@ class SendSideBandwidthEstimation
     //TODO: get RTT from here
     private final MediaStream mediaStream;
 
-    SendSideBandwidthEstimation(MediaStream stream, long startBitrate)
+    private BandwidthEstimatorImpl b;
+    SendSideBandwidthEstimation(MediaStream stream, long startBitrate, BandwidthEstimatorImpl b)
     {
+        this.b =b;
         mediaStream = stream;
         setBitrate(startBitrate);
     }
@@ -373,6 +375,7 @@ class SendSideBandwidthEstimation
     @Override
     public void rembReceived(long bitrateBps)
     {
+        logger.warn("ZZZ "+System.currentTimeMillis()+" "+b.e+ " REMB " + bitrateBps);
         updateReceiverEstimate(bitrateBps);
     }
 

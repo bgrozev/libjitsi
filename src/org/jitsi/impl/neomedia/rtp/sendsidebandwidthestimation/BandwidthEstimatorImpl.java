@@ -34,6 +34,7 @@ public class BandwidthEstimatorImpl
     extends RTCPReportAdapter
     implements BandwidthEstimator, RecurringProcessible
 {
+    public String e = "someEndpoint";
     /**
      * The interval at which {@link #process()} should be called, in
      * milliseconds.
@@ -82,7 +83,7 @@ public class BandwidthEstimatorImpl
     {
         mediaStream = stream;
         sendSideBandwidthEstimation
-            = new SendSideBandwidthEstimation(stream, START_BITRATE_BPS);
+            = new SendSideBandwidthEstimation(stream, START_BITRATE_BPS, this);
         sendSideBandwidthEstimation.setMinMaxBitrate(
                 MIN_BITRATE_BPS, MAX_BITRATE_BPS);
 
