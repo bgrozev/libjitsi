@@ -67,11 +67,12 @@ public class AbstractRTPPacketPredicate
 
                     if (200 <= pt && pt <= 211)
                     {
-                        result = rtcp;
+                        result = rtcp && pkt.getLength() >= 8;
                     }
                     else
                     {
-                        result = !rtcp;
+                        result = !rtcp
+                            && pkt.getLength() >= RawPacket.FIXED_HEADER_SIZE;
                     }
                 }
                 else
