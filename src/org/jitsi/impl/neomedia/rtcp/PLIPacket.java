@@ -15,6 +15,8 @@
  */
 package org.jitsi.impl.neomedia.rtcp;
 
+import net.sf.fmj.media.rtp.*;
+
 /**
  * @author George Politis
  */
@@ -25,6 +27,14 @@ public class PLIPacket
      * The FMT for the PLI packets.
      */
     public static final int FMT = 1;
+
+    /**
+     * Initializes a new {@link PLIPacket} instance.
+     */
+    public PLIPacket(RTCPCompoundPacket base)
+    {
+        super(base);
+    }
 
     /**
      * Ctor.

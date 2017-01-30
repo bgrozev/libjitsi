@@ -15,6 +15,8 @@
  */
 package org.jitsi.impl.neomedia.rtcp;
 
+import net.sf.fmj.media.rtp.*;
+
 /**
  * @author George Politis
  */
@@ -25,6 +27,14 @@ public class FIRPacket
      * The FMT of an FIR packet.
      */
     public static final int FMT = 4;
+
+    /**
+     * Initializes a new {@link FIRPacket} instance.
+     */
+    public FIRPacket(RTCPCompoundPacket base)
+    {
+        super(base);
+    }
 
     /**
      * Ctor.
