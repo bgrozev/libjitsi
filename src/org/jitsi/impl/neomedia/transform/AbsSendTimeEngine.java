@@ -68,7 +68,7 @@ public class AbsSendTimeEngine
             // value.
             // TODO: PERC-related logic (don't modify header extensions unless
             // they come after an OHB extension.
-            if (!replaceExtension(pkt))
+            //if (!replaceExtension(pkt))
             {
                 // If it doesn't, add a new extension.
                 addExtension(pkt);

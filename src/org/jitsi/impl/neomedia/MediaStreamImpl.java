@@ -342,7 +342,7 @@ public class MediaStreamImpl
      * The ID of the frame markings RTP header extension. We use this field as
      * a cache, in order to not access {@link #activeRTPExtensions} every time.
      */
-    private byte frameMarkingsExtensionId = -1;
+    private byte frameMarkingsExtensionId = 9;
 
     /**
      * Initializes a new <tt>MediaStreamImpl</tt> instance which will use the
