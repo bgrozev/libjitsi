@@ -54,17 +54,6 @@
       <version>2.0-20161221.230043-4</version>
     </dependency>
     <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>jitsi-lgpl-dependencies</artifactId>
-      <optional>true</optional>
-      <version>1.0-20150723.002855-1</version>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>zrtp4j-light</artifactId>
-      <version>3.2.0-jitsi-1-20150723.002345-1</version>
-    </dependency>
-    <dependency>
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.core</artifactId>
     </dependency>
