@@ -21,15 +21,11 @@ import javax.media.*;
 import javax.media.format.*;
 import javax.sdp.*;
 
-import org.jitsi.impl.neomedia.codec.*;
-import org.jitsi.impl.neomedia.codec.video.h264.*;
-import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.format.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
-import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 
@@ -55,24 +51,6 @@ public class MediaUtils
      */
     private static final Map<String, String> jmfEncodingToEncodings
         = new HashMap<>();
-
-    /**
-     * The maximum number of channels for audio that is available through
-     * <tt>MediaUtils</tt>.
-     */
-    public static final int MAX_AUDIO_CHANNELS;
-
-    /**
-     * The maximum sample rate for audio that is available through
-     * <tt>MediaUtils</tt>.
-     */
-    public static final double MAX_AUDIO_SAMPLE_RATE;
-
-    /**
-     * The maximum sample size in bits for audio that is available through
-     * <tt>MediaUtils</tt>.
-     */
-    public static final int MAX_AUDIO_SAMPLE_SIZE_IN_BITS;
 
     /**
      * The <tt>MediaFormat</tt>s which do not have RTP payload types assigned by
@@ -147,20 +125,6 @@ public class MediaUtils
             MediaType.AUDIO,
             Constants.G722_RTP,
             8000);
-        if (EncodingConfigurationImpl.G729)
-        {
-            Map<String, String> g729FormatParams = new HashMap<>();
-            g729FormatParams.put("annexb", "no");
-
-            addMediaFormats(
-                (byte) SdpConstants.G729,
-                "G729",
-                MediaType.AUDIO,
-                AudioFormat.G729_RTP,
-                g729FormatParams,
-                null,
-                8000);
-        }
         addMediaFormats(
             MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
             "telephone-event",
@@ -271,45 +235,8 @@ public class MediaUtils
          * XXX The initialization of MediaServiceImpl is very complex so it is
          * wise to not reference it at the early stage of its initialization.
          */
-        ScreenDevice screen = ScreenDeviceImpl.getDefaultScreenDevice();
-        java.awt.Dimension res = (screen == null) ? null : screen.getSize();
+        h264FormatParams.put("profile-level-id", "4DE01f");
 
-        h264AdvancedAttributes.put("imageattr", createImageAttr(null, res));
-
-        if ((cfg == null)
-                || cfg
-                    .getString(
-                            "net.java.sip.communicator.impl.neomedia"
-                                + ".codec.video.h264.defaultProfile",
-                            JNIEncoder.MAIN_PROFILE)
-                        .equals(JNIEncoder.MAIN_PROFILE))
-        {
-            // main profile, common features, HD capable level 3.1
-            h264FormatParams.put("profile-level-id", "4DE01f");
-        }
-        else
-        {
-            // baseline profile, common features, HD capable level 3.1
-            h264FormatParams.put("profile-level-id", "42E01f");
-        }
-
-        // By default, packetization-mode=1 is enabled.
-        if ((cfg == null)
-                || cfg.getBoolean(
-                        "net.java.sip.communicator.impl.neomedia"
-                            + ".codec.video.h264.packetization-mode-1.enabled",
-                        true))
-        {
-            // packetization-mode=1
-            h264FormatParams.put(packetizationMode, "1");
-            addMediaFormats(
-                    MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
-                    "H264",
-                    MediaType.VIDEO,
-                    Constants.H264_RTP,
-                    h264FormatParams,
-                    h264AdvancedAttributes);
-        }
         // packetization-mode=0
         /*
          * XXX At the time of this writing,
@@ -330,28 +257,6 @@ public class MediaUtils
                 Constants.H264_RTP,
                 h264FormatParams,
                 h264AdvancedAttributes);
-
-        /* H263+
-        Map<String, String> h263FormatParams
-            = new HashMap<String, String>();
-        Map<String, String> h263AdvancedAttributes
-            = new LinkedHashMap<String, String>();
-
-         // The maximum resolution we can receive is the size of our screen
-         // device.
-        if (res != null)
-            h263FormatParams.put("CUSTOM", res.width + "," + res.height + ",2");
-        h263FormatParams.put("VGA", "2");
-        h263FormatParams.put("CIF", "1");
-        h263FormatParams.put("QCIF", "1");
-
-        addMediaFormats(
-                MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
-                "H263-1998",
-                MediaType.VIDEO,
-                Constants.H263P_RTP,
-                h263FormatParams,
-                h263AdvancedAttributes);*/
 
         addMediaFormats(
                 MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
@@ -424,10 +329,6 @@ public class MediaUtils
                 maxAudioSampleSizeInBits = sampleSizeInBits;
             }
         }
-
-        MAX_AUDIO_CHANNELS = maxAudioChannels;
-        MAX_AUDIO_SAMPLE_RATE = maxAudioSampleRate;
-        MAX_AUDIO_SAMPLE_SIZE_IN_BITS = maxAudioSampleSizeInBits;
     }
 
     /**

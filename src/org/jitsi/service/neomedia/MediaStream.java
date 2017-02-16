@@ -21,7 +21,6 @@ import java.util.*;
 
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.*;
-import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.stats.*;
 
@@ -34,6 +33,7 @@ import org.jitsi.service.neomedia.stats.*;
  * @author Emil Ivov
  * @author Lyubomir Marinov
  * @author George Politis
+ * @author Boris Grozev
  */
 public interface MediaStream
 {
@@ -64,12 +64,6 @@ public interface MediaStream
     void addDynamicRTPPayloadType(
             byte rtpPayloadType,
             MediaFormat format);
-
-    /**
-     * Clears the dynamic RTP payload type associations in this
-     * <tt>MediaStream</tt>.
-     */
-    void clearDynamicRTPPayloadTypes();
 
     /**
      * Adds an additional RTP payload mapping that will overriding one that
@@ -127,14 +121,6 @@ public interface MediaStream
     Map<Byte, RTPExtension> getActiveRTPExtensions();
 
     /**
-     * Gets the device that this stream uses to play back and capture media.
-     *
-     * @return the <tt>MediaDevice</tt> that this stream uses to play back and
-     * capture media.
-     */
-    MediaDevice getDevice();
-
-    /**
      * Gets the direction in which this <tt>MediaStream</tt> is allowed to
      * stream media.
      *
@@ -174,15 +160,6 @@ public interface MediaStream
      * negotiated for it.
      */
     byte getDynamicRTPPayloadType(String codec);
-
-    /**
-     * Returns the <tt>MediaFormat</tt> that this stream is currently
-     * transmitting in.
-     *
-     * @return the <tt>MediaFormat</tt> that this stream is currently
-     * transmitting in.
-     */
-    MediaFormat getFormat();
 
     /**
      * Returns the <tt>MediaFormat</tt> that is associated to the payload type
@@ -307,26 +284,6 @@ public interface MediaStream
     MediaStreamTarget getTarget();
 
     /**
-     * Returns the transport protocol used by the streams.
-     *
-     * @return the transport protocol (UDP or TCP) used by the streams. null if
-     * the stream connector is not instanciated.
-     */
-    StreamConnector.Protocol getTransportProtocol();
-
-    /**
-     * Determines whether this <tt>MediaStream</tt> is set to transmit "silence"
-     * instead of the media being fed from its <tt>MediaDevice</tt>. "Silence"
-     * for video is understood as video data which is not the captured video
-     * data and may represent, for example, a black image.
-     *
-     * @return <tt>true</tt> if this <tt>MediaStream</tt> is set to transmit
-     * "silence" instead of the media fed from its <tt>MediaDevice</tt>;
-     * <tt>false</tt>, otherwise
-     */
-    boolean isMute();
-
-    /**
      * Determines whether {@link #start()} has been called on this
      * <tt>MediaStream</tt> without {@link #stop()} or {@link #close()}
      * afterwards.
@@ -363,15 +320,6 @@ public interface MediaStream
     void setConnector(StreamConnector connector);
 
     /**
-     * Sets the device that this stream should use to play back and capture
-     * media.
-     *
-     * @param device the <tt>MediaDevice</tt> that this stream should use to
-     * play back and capture media.
-     */
-    void setDevice(MediaDevice device);
-
-    /**
      * Sets the direction in which media in this <tt>MediaStream</tt> is to be
      * streamed. If this <tt>MediaStream</tt> is not currently started, calls to
      * {@link #start()} later on will start it only in the specified
@@ -382,27 +330,6 @@ public interface MediaStream
      * <tt>MediaStream</tt> is to stream media when it is started
      */
     void setDirection(MediaDirection direction);
-
-    /**
-     * Sets the <tt>MediaFormat</tt> that this <tt>MediaStream</tt> should
-     * transmit in.
-     *
-     * @param format the <tt>MediaFormat</tt> that this <tt>MediaStream</tt>
-     * should transmit in.
-     */
-    void setFormat(MediaFormat format);
-
-    /**
-     * Causes this <tt>MediaStream</tt> to stop transmitting the media being fed
-     * from this stream's <tt>MediaDevice</tt> and transmit "silence" instead.
-     * "Silence" for video is understood as video data which is not the captured
-     * video data and may represent, for example, a black image.
-     *
-     * @param mute <tt>true</tt> if we are to start transmitting "silence" and
-     * <tt>false</tt> if we are to use media from this stream's
-     * <tt>MediaDevice</tt> again.
-     */
-    void setMute(boolean mute);
 
     /**
      * Sets the name of this stream. Stream names are used by some protocols,

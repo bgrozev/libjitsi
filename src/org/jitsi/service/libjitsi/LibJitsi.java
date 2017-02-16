@@ -17,7 +17,6 @@ package org.jitsi.service.libjitsi;
 
 import java.lang.reflect.*;
 
-import org.jitsi.service.audionotifier.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.fileaccess.*;
 import org.jitsi.service.neomedia.*;
@@ -63,21 +62,6 @@ public abstract class LibJitsi
      * the <tt>getXXXService</tt> methods.
      */
     private static LibJitsi impl;
-
-    /**
-     * Gets the <tt>AudioNotifierService</tt> instance. If no existing
-     * <tt>AudioNotifierService</tt> instance is known to the library, tries to
-     * initialize a new one. (Such a try to initialize a new instance is
-     * performed just once while the library is initialized.)
-     *
-     * @return the <tt>AudioNotifierService</tt> instance known to the library
-     * or <tt>null</tt> if no <tt>AudioNotifierService</tt> instance is known to
-     * the library
-     */
-    public static AudioNotifierService getAudioNotifierService()
-    {
-        return invokeGetServiceOnImpl(AudioNotifierService.class);
-    }
 
     /**
      * Gets the <tt>ConfigurationService</tt> instance. If no existing

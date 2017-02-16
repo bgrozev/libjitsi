@@ -22,7 +22,6 @@ import java.util.concurrent.*;
 import org.bouncycastle.crypto.tls.*;
 import org.ice4j.ice.*;
 import org.jitsi.impl.neomedia.*;
-import org.jitsi.impl.neomedia.codec.video.h264.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 
@@ -267,8 +266,7 @@ public class DatagramTransportImpl
              * but we have to start somewhere.
              */
             sendLimit
-                = DtlsPacketTransformer.DTLS_RECORD_HEADER_LENGTH
-                    + Packetizer.MAX_PAYLOAD_SIZE;
+                = DtlsPacketTransformer.DTLS_RECORD_HEADER_LENGTH + 1024;
         }
         return sendLimit;
     }

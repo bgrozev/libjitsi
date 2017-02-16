@@ -26,15 +26,11 @@ import net.sf.fmj.media.rtp.util.*;
 import net.sf.fmj.utility.*;
 
 import org.jitsi.impl.neomedia.*;
-import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.stats.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.codec.*;
-import org.jitsi.service.neomedia.control.*;
-import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
 
@@ -518,18 +514,6 @@ public class StatisticsEngine
                 if ((lostPacketCount > 0)
                         && (lostPacketCount <= expectedPacketCount))
                 {
-                    // RFC 3611 mentions that the total number of packets lost
-                    // takes into account "the effects of applying any error
-                    // protection such as FEC".
-                    long fecDecodedPacketCount
-                        = getFECDecodedPacketCount(receiveStream);
-
-                    if ((fecDecodedPacketCount > 0)
-                            && (fecDecodedPacketCount <= lostPacketCount))
-                    {
-                        lostPacketCount -= fecDecodedPacketCount;
-                    }
-
                     lossRate
                         = (lostPacketCount / (double) expectedPacketCount)
                             * 256;
@@ -616,90 +600,13 @@ public class StatisticsEngine
         byte packetLossConcealment
             = RTCPExtendedReport.VoIPMetricsReportBlock
                 .DISABLED_PACKET_LOSS_CONCEALMENT;
-        MediaFormat mediaFormat = mediaStream.getFormat();
-
-        if (mediaFormat != null)
-        {
-            String encoding = mediaFormat.getEncoding();
-
-            if (encoding != null)
-            {
-                encoding = encoding.toLowerCase();
-                if (Constants.OPUS_RTP.toLowerCase().contains(encoding)
-                        || Constants.SILK_RTP.toLowerCase().contains(encoding))
-                {
-                    packetLossConcealment
-                        = RTCPExtendedReport.VoIPMetricsReportBlock
-                            .STANDARD_PACKET_LOSS_CONCEALMENT;
-                }
-            }
-        }
         voipMetrics.setPacketLossConcealment(packetLossConcealment);
 
-        // jitter buffer adaptive (JBA)
-        JitterBufferControl jbc
-            = MediaStreamStatsImpl.getJitterBufferControl(receiveStream);
         double discardRate;
 
-        if (jbc == null)
-        {
-            voipMetrics.setJitterBufferAdaptive(
-                    RTCPExtendedReport.VoIPMetricsReportBlock
+        voipMetrics.setJitterBufferAdaptive(
+                RTCPExtendedReport.VoIPMetricsReportBlock
                         .UNKNOWN_JITTER_BUFFER_ADAPTIVE);
-        }
-        else
-        {
-            // discard rate
-            if (expectedPacketCount > 0)
-            {
-                int discardedPacketCount = jbc.getDiscarded();
-
-                if ((discardedPacketCount > 0)
-                        && (discardedPacketCount <= expectedPacketCount))
-                {
-                    discardRate
-                        = (discardedPacketCount / (double) expectedPacketCount)
-                            * 256;
-                    if (discardRate > 255)
-                        discardRate = 255;
-                    voipMetrics.setDiscardRate((short) discardRate);
-                }
-            }
-
-            // jitter buffer nominal delay (JB nominal)
-            // jitter buffer maximum delay (JB maximum)
-            // jitter buffer absolute maximum delay (JB abs max)
-            int maximumDelay = jbc.getMaximumDelay();
-
-            voipMetrics.setJitterBufferMaximumDelay(maximumDelay);
-            voipMetrics.setJitterBufferNominalDelay(jbc.getNominalDelay());
-            if (jbc.isAdaptiveBufferEnabled())
-            {
-                voipMetrics.setJitterBufferAdaptive(
-                        RTCPExtendedReport.VoIPMetricsReportBlock
-                            .ADAPTIVE_JITTER_BUFFER_ADAPTIVE);
-                voipMetrics.setJitterBufferAbsoluteMaximumDelay(
-                        jbc.getAbsoluteMaximumDelay());
-            }
-            else
-            {
-                voipMetrics.setJitterBufferAdaptive(
-                        RTCPExtendedReport.VoIPMetricsReportBlock
-                            .NON_ADAPTIVE_JITTER_BUFFER_ADAPTIVE);
-                // Jitter buffer absolute maximum delay (JB abs max) MUST be set
-                // to jitter buffer maximum delay (JB maximum) for fixed jitter
-                // buffer implementations.
-                voipMetrics.setJitterBufferAbsoluteMaximumDelay(maximumDelay);
-            }
-
-            // jitter buffer rate (JB rate)
-            /*
-             * TODO We do not know how to calculate it at the time of this
-             * writing. It very likely is to be calculated in
-             * JitterBufferBehaviour because JitterBufferBehaviour implements
-             * the adaptiveness of a jitter buffer implementation.
-             */
-        }
 
         if (receptionStats instanceof RTPStats)
         {
@@ -735,33 +642,6 @@ public class StatisticsEngine
         }
 
         return voipMetrics;
-    }
-
-    /**
-     * Gets the number of packets in a <tt>ReceiveStream</tt> which have been
-     * decoded by means of FEC.
-     *
-     * @param receiveStream the <tt>ReceiveStream</tt> of which the number of
-     * packets decoded by means of FEC is to be returned
-     * @return the number of packets in <tt>receiveStream</tt> which have been
-     * decoded by means of FEC
-     */
-    private long getFECDecodedPacketCount(ReceiveStream receiveStream)
-    {
-        MediaDeviceSession devSession = mediaStream.getDeviceSession();
-        long fecDecodedPacketCount = 0;
-
-        if (devSession != null)
-        {
-            Iterable<FECDecoderControl> decoderControls
-                = devSession.getDecoderControls(
-                        receiveStream,
-                        FECDecoderControl.class);
-
-            for (FECDecoderControl decoderControl : decoderControls)
-                fecDecodedPacketCount += decoderControl.fecPacketsDecoded();
-        }
-        return fecDecodedPacketCount;
     }
 
     /**
