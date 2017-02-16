@@ -470,4 +470,10 @@ public interface MediaStream
      * or null.
      */
     MediaStreamTrackReceiver getMediaStreamTrackReceiver();
+
+    /**
+     * Clears the dynamic RTP payload type associations in this
+     * <tt>MediaStream</tt>.
+     */
+    void clearDynamicRTPPayloadTypes();
 }

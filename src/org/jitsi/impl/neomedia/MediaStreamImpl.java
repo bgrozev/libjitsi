@@ -2397,4 +2397,32 @@ public class MediaStreamImpl
     {
         return mediaType;
     }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void clearDynamicRTPPayloadTypes()
+    {
+        synchronized (dynamicRTPPayloadTypes)
+        {
+            dynamicRTPPayloadTypes.clear();
+
+            REDTransformEngine redTransformEngine = getRedTransformEngine();
+            if (redTransformEngine != null)
+            {
+                redTransformEngine.setIncomingPT((byte) -1);
+                redTransformEngine.setOutgoingPT((byte) -1);
+            }
+
+            FECTransformEngine fecTransformEngine = getFecTransformEngine();
+            if (fecTransformEngine != null)
+            {
+                fecTransformEngine.setIncomingPT((byte) -1);
+                fecTransformEngine.setOutgoingPT((byte) -1);
+            }
+        }
+
+        this.onDynamicPayloadTypesChanged();
+    }
+
 }
