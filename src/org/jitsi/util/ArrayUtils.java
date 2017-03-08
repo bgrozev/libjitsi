@@ -21,6 +21,7 @@ import java.util.*;
 /**
  *
  * @author Lyubomir Marinov
+ * @author Boris Grozev
  */
 public final class ArrayUtils
 {
@@ -61,6 +62,51 @@ public final class ArrayUtils
         }
         array[array.length - 1] = element;
         return array;
+    }
+
+    /**
+     * Removes a specific element to a specific array with a specific component
+     * type if the array contains the element.
+     *
+     * @param array the array to add <tt>element</tt> to
+     * @param componentType the component type of <tt>array</tt>
+     * @param element the element to remove from <tt>array</tt>
+     * @return an array with the specified <tt>componentType</tt> and
+     * containing all elements of {@code array except} <tt>element</tt>.
+     * If <tt>array</tt> did not contain <tt>element</tt> already, returns
+     * <tt>array</tt>.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T[] remove(T[] array, Class<T> componentType, T element)
+    {
+        if (element == null)
+            throw new NullPointerException("element");
+
+        if (array == null)
+        {
+            return null;
+        }
+        else
+        {
+            int idx = -1;
+            for (int i = 0; i < array.length; i++)
+            {
+                if (element.equals(array[i]))
+                {
+                    idx = i;
+                    break;
+                }
+            }
+            if (idx == -1)
+                return array;
+
+            T[] newArray
+                = (T[]) Array.newInstance(componentType, array.length - 1);
+
+            System.arraycopy(array, 0, newArray, 0, idx);
+            System.arraycopy(array, idx + 1, newArray, idx, newArray.length - idx);
+            return newArray;
+        }
     }
 
     /** Prevents the initialization of new {@code ArrayUtils} instances. */

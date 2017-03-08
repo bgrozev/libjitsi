@@ -85,6 +85,8 @@ public class RawPacket
      */
     private HeaderExtensions headerExtensions;
 
+    private MediaStream mediaStream;
+
     /**
      * Initializes a new empty <tt>RawPacket</tt> instance.
      */
@@ -1800,4 +1802,16 @@ public class RawPacket
             throw new UnsupportedOperationException("remove");
         }
     }
+
+    public MediaStream getMediaStream()
+    {
+        return mediaStream;
+    }
+
+    public void setMediaStream(MediaStream mediaStream)
+    {
+        this.mediaStream = mediaStream;
+    }
+
+
 }

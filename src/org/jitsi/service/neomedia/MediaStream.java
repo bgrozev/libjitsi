@@ -24,6 +24,8 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.stats.*;
 
+import javax.print.attribute.standard.*;
+
 /**
  * The <tt>MediaStream</tt> class represents a (generally) bidirectional RTP
  * stream between exactly two parties. The class reflects one media stream, in
@@ -476,4 +478,9 @@ public interface MediaStream
      * <tt>MediaStream</tt>.
      */
     void clearDynamicRTPPayloadTypes();
+
+    /**
+     * NOTE: MUST NOT modify pkt, create a copy if necessary.
+     */
+    public boolean writePacket(RawPacket pkt, MediaStream source);
 }

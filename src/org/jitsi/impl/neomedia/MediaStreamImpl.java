@@ -2425,4 +2425,10 @@ public class MediaStreamImpl
         this.onDynamicPayloadTypesChanged();
     }
 
+    @Override
+    public boolean writePacket(RawPacket pkt, MediaStream source)
+    {
+        return true;
+    }
+
 }
