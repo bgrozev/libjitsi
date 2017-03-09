@@ -86,6 +86,7 @@ public class RawPacket
     private HeaderExtensions headerExtensions;
 
     private MediaStream mediaStream;
+    private Object context;
 
     /**
      * Initializes a new empty <tt>RawPacket</tt> instance.
@@ -1813,5 +1814,18 @@ public class RawPacket
         this.mediaStream = mediaStream;
     }
 
+    /**
+     * TODO: refactor. used for skipping transform engines
+     * @return
+     */
+    public Object getContext()
+    {
+        return context;
+    }
+
+    public void setContext(Object context)
+    {
+        this.context = context;
+    }
 
 }

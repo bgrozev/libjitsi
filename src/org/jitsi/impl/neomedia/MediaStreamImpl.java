@@ -240,6 +240,11 @@ public class MediaStreamImpl
 
     private final MediaType mediaType;
 
+    private final PacketSwitch packetSwitch;
+    private final ReceiveThread receiveThread;
+    private final SendThread sendThread;
+    private final DatagramSocket socket;
+
     /**
      * Initializes a new <tt>MediaStreamImpl</tt> instance which will use the
      * specified <tt>MediaDevice</tt> for both capture and playback of media
@@ -256,9 +261,15 @@ public class MediaStreamImpl
     public MediaStreamImpl(
             StreamConnector connector,
             SrtpControl srtpControl,
-            MediaType mediaType)
+            MediaType mediaType,
+            PacketSwitch packetSwitch,
+            DatagramSocket socket)
     {
         this.mediaType = mediaType;
+        this.packetSwitch = Objects.requireNonNull(packetSwitch, "packetSwitch");
+        this.socket = socket;
+        this.receiveThread = new ReceiveThread(this, socket);
+        this.sendThread = new SendThread(this, socket);
 
         this.srtpControl = srtpControl;
         this.srtpControl.registerUser(this);
@@ -2426,9 +2437,15 @@ public class MediaStreamImpl
     }
 
     @Override
-    public boolean writePacket(RawPacket pkt, MediaStream source)
+    public boolean writePacket(RawPacket pkt, MediaStream source, boolean needToCopy)
     {
+        // add to the send thread
         return true;
     }
 
+    @Override
+    public PacketSwitch getPacketSwitch()
+    {
+        return packetSwitch;
+    }
 }

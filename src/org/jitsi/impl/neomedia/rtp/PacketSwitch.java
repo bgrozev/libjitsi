@@ -21,6 +21,9 @@ import org.jitsi.util.*;
 
 
 /**
+ * TODO: return packets to the pool
+ * TODO: think about removing the thread and having the adding threads do the
+ * loop (which should be quick, provided that it only copies it to a queue somewhere)
  * @author Boris Grozev
  */
 public class PacketSwitch
@@ -69,16 +72,25 @@ public class PacketSwitch
         }
     }
 
+    public boolean addPacket(RawPacket pkt)
+    {
+        queue.add(pkt);
+        return true;
+    }
+
     private boolean writePacket(RawPacket pkt)
     {
         MediaStream[] mediaStreams = this.mediaStreams;
 
         MediaStream source = pkt.getMediaStream();
-        for (MediaStream ms : mediaStreams)
+        for (int i = 0; i < mediaStreams.length; i++)
         {
+            MediaStream ms = mediaStreams[i];
             if (!ms.equals(source))
             {
-                ms.writePacket(pkt, source);
+                boolean skipCopy = i == mediaStreams.length-1
+                    || (i == mediaStreams.length - 2 && source.equals(mediaStreams[i+1]));
+                ms.writePacket(pkt, source, !skipCopy);
             }
         }
         return true;
@@ -88,5 +100,10 @@ public class PacketSwitch
     {
         packetPool.close();
         queue.close();
+    }
+
+    public PacketPool getPacketPool()
+    {
+        return packetPool;
     }
 }

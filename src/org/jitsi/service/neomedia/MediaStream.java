@@ -479,8 +479,6 @@ public interface MediaStream
      */
     void clearDynamicRTPPayloadTypes();
 
-    /**
-     * NOTE: MUST NOT modify pkt, create a copy if necessary.
-     */
-    public boolean writePacket(RawPacket pkt, MediaStream source);
+    public boolean writePacket(RawPacket pkt, MediaStream source, boolean needToCopy);
+    public PacketSwitch getPacketSwitch();
 }
