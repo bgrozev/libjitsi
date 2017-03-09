@@ -179,18 +179,13 @@ public class DtlsPacketTransformer
     private final int componentID;
 
     /**
-     * The <tt>RTPConnector</tt> which uses this <tt>PacketTransformer</tt>.
-     */
-    private AbstractRTPConnector connector;
-
-    /**
      * The background <tt>Thread</tt> which initializes {@link #dtlsTransport}.
      */
     private Thread connectThread;
 
     /**
      * The <tt>DatagramTransport</tt> implementation which adapts
-     * {@link #connector} and this <tt>PacketTransformer</tt> to the terms of
+     * {@code #connector} and this <tt>PacketTransformer</tt> to the terms of
      * the Bouncy Castle Crypto APIs.
      */
     private DatagramTransportImpl datagramTransport;
@@ -300,7 +295,6 @@ public class DtlsPacketTransformer
         // We will use that mediaType to signal the normal stop then as well
         // i.e. we will call setMediaType(null) first.
         setMediaType(null);
-        setConnector(null);
     }
 
     /**
@@ -500,7 +494,6 @@ public class DtlsPacketTransformer
                 msg += " Received fatal unexpected message.";
                 if (i == 0
                         || !Thread.currentThread().equals(connectThread)
-                        || connector == null
                         || mediaType == null)
                 {
                     msg
@@ -750,7 +743,7 @@ public class DtlsPacketTransformer
 
     private synchronized void maybeStart()
     {
-        if (this.mediaType != null && this.connector != null && !started)
+        if (this.mediaType != null && !started)
         {
             start();
         }
@@ -797,11 +790,6 @@ public class DtlsPacketTransformer
             propertyChange(Properties.RTCPMUX_PNAME);
             propertyChange(Properties.MEDIA_TYPE_PNAME);
             propertyChange(Properties.CONNECTOR_PNAME);
-        }
-        else if (Properties.CONNECTOR_PNAME.equals(propertyName))
-        {
-            setConnector(
-                    (AbstractRTPConnector) getProperties().get(propertyName));
         }
         else if (Properties.MEDIA_TYPE_PNAME.equals(propertyName))
         {
@@ -1116,31 +1104,6 @@ public class DtlsPacketTransformer
     }
 
     /**
-     * Sets the <tt>RTPConnector</tt> which is to use or uses this
-     * <tt>PacketTransformer</tt>.
-     *
-     * @param connector the <tt>RTPConnector</tt> which is to use or uses this
-     * <tt>PacketTransformer</tt>
-     */
-    private void setConnector(AbstractRTPConnector connector)
-    {
-        if (this.connector != connector)
-        {
-            AbstractRTPConnector oldValue = this.connector;
-
-            this.connector = connector;
-
-            DatagramTransportImpl datagramTransport = this.datagramTransport;
-
-            if (datagramTransport != null)
-                datagramTransport.setConnector(connector);
-
-            if (connector != null)
-                maybeStart();
-        }
-    }
-
-    /**
      * Sets the <tt>MediaType</tt> of the stream which this instance is to work
      * for/be associated with.
      *
@@ -1217,12 +1180,7 @@ public class DtlsPacketTransformer
             return;
         }
 
-        AbstractRTPConnector connector = this.connector;
-
         this.started = true;
-
-        if (connector == null)
-            throw new NullPointerException("connector");
 
         DtlsControl.Setup setup = getProperties().getSetup();
         final DTLSProtocol dtlsProtocolObj;
@@ -1243,7 +1201,10 @@ public class DtlsPacketTransformer
         final DatagramTransportImpl datagramTransport
             = new DatagramTransportImpl(componentID);
 
-        datagramTransport.setConnector(connector);
+        //FFFF
+        MediaStream mediaStream
+            = getTransformEngine().getDtlsControl().getMediaStream();
+        datagramTransport.setMediaStream(mediaStream);
 
         Thread connectThread
             = new Thread()

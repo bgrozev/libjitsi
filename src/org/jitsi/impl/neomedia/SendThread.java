@@ -67,6 +67,12 @@ public class SendThread
                                  });
     }
 
+    boolean addPacket(RawPacket pkt)
+    {
+        queue.add(pkt);
+        return true;
+    }
+
     boolean writePacket(RawPacket pkt)
     {
         TransformEngine transformEngine = mediaStream.getTransformEngineChain();

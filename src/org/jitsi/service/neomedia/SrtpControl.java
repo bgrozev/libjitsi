@@ -95,14 +95,6 @@ public interface SrtpControl
     public boolean requiresSecureSignalingTransport();
 
     /**
-     * Sets the <tt>RTPConnector</tt> which is to use or uses this SRTP engine.
-     *
-     * @param connector the <tt>RTPConnector</tt> which is to use or uses this
-     * SRTP engine
-     */
-    public void setConnector(AbstractRTPConnector connector);
-
-    /**
      * When in multistream mode, enables the master session.
      *
      * @param masterSession whether current control, controls the master session.

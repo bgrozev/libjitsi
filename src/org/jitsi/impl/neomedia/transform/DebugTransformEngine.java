@@ -188,6 +188,15 @@ public class DebugTransformEngine implements TransformEngine
                 ? defaultRemoteAddress
                 : (InetSocketAddress) socket.getRemoteSocketAddress();
 
+        if (src == null)
+        {
+            src = defaultLocalAddress;
+        }
+        if (dst == null)
+        {
+            dst = defaultRemoteAddress;
+        }
+
         // When the caller is a receiver, the situation is the exact
         // opposite of when the caller is a sender.
         if (!sender)

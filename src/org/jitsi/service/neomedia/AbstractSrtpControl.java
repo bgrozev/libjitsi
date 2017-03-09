@@ -42,7 +42,7 @@ public abstract class AbstractSrtpControl<T extends SrtpControl.TransformEngine>
      * The {@code Object}s currently registered as users of this
      * {@code SrtpControl} (through {@link #registerUser(Object)}).
      */
-    private final Set<Object> users = new HashSet<>();
+    protected final Set<Object> users = new HashSet<>();
 
     /**
      * Initializes a new <tt>AbstractSrtpControl</tt> instance with a specific

@@ -46,11 +46,8 @@ public class DatagramTransportImpl
      */
     private final int componentID;
 
-    /**
-     * The <tt>RTPConnector</tt> which represents and implements the actual
-     * <tt>DatagramSocket</tt> adapted by this instance.
-     */
-    private AbstractRTPConnector connector;
+
+    private MediaStream mediaStream;
 
     /**
      * The pool of <tt>RawPacket</tt>s instances to reduce their allocations
@@ -112,13 +109,13 @@ public class DatagramTransportImpl
         receiveQ = new ArrayBlockingQueue<>(receiveQCapacity);
     }
 
-    private AbstractRTPConnector assertNotClosed(
+    private MediaStream assertNotClosed(
             boolean breakOutOfDTLSReliableHandshakeReceiveMessage)
         throws IOException
     {
-        AbstractRTPConnector connector = this.connector;
+        MediaStream stream = this.mediaStream;
 
-        if (connector == null)
+        if (stream == null)
         {
             IOException ioe
                 = new IOException(getClass().getName() + " is closed!");
@@ -129,7 +126,7 @@ public class DatagramTransportImpl
         }
         else
         {
-            return connector;
+            return stream;
         }
     }
 
@@ -162,7 +159,7 @@ public class DatagramTransportImpl
     public void close()
         throws IOException
     {
-        setConnector(null);
+        setMediaStream(null);
     }
 
     private void doSend(byte[] buf, int off, int len)
@@ -171,29 +168,19 @@ public class DatagramTransportImpl
         // Do preserve the sequence of sends.
         flush();
 
-        AbstractRTPConnector connector = assertNotClosed(false);
+        MediaStream stream = assertNotClosed(false);
         RTPConnectorOutputStream outputStream;
 
-        switch (componentID)
+        // FFFF
+        try
         {
-        case Component.RTCP:
-            outputStream = connector.getControlOutputStream();
-            break;
-        case Component.RTP:
-            outputStream = connector.getDataOutputStream();
-            break;
-        default:
-            String msg = "componentID";
-            IllegalStateException ise = new IllegalStateException(msg);
-
-            logger.error(msg, ise);
-            throw ise;
+            stream.injectPacket(new RawPacket(buf, off, len), true, null);
+        }
+        catch (TransmissionFailedException tfe)
+        {
+            logger.warn("failed to send DTLS data");
         }
 
-        // Write synchronously in order to avoid our packet getting stuck in the
-        // write queue (in case it is blocked waiting for DTLS to finish, for
-        // example).
-        outputStream.syncWrite(buf, off, len);
     }
 
     private void flush()
@@ -239,6 +226,8 @@ public class DatagramTransportImpl
     public int getReceiveLimit()
         throws IOException
     {
+        // FFFF
+        /*
         AbstractRTPConnector connector = this.connector;
         int receiveLimit
             = (connector == null) ? -1 : connector.getReceiveBufferSize();
@@ -246,6 +235,8 @@ public class DatagramTransportImpl
         if (receiveLimit <= 0)
             receiveLimit = RTPConnectorInputStream.PACKET_RECEIVE_BUFFER_LENGTH;
         return receiveLimit;
+            */
+        return 4096;
     }
 
     /**
@@ -255,9 +246,8 @@ public class DatagramTransportImpl
     public int getSendLimit()
         throws IOException
     {
-        AbstractRTPConnector connector = this.connector;
-        int sendLimit
-            = (connector == null) ? -1 : connector.getSendBufferSize();
+        //AbstractRTPConnector connector = this.connector;
+        int sendLimit = -1;
 
         if (sendLimit <= 0)
         {
@@ -578,16 +568,12 @@ public class DatagramTransportImpl
     /**
      * Sets the <tt>RTPConnector</tt> which represents and implements the actual
      * <tt>DatagramSocket</tt> to be adapted by this instance.
-     * 
-     * @param connector the <tt>RTPConnector</tt> which represents and
-     * implements the actual <tt>DatagramSocket</tt> to be adapted by this
-     * instance
      */
-    void setConnector(AbstractRTPConnector connector)
+    void setMediaStream(MediaStream mediaStream)
     {
         synchronized (receiveQ)
         {
-            this.connector = connector;
+            this.mediaStream = mediaStream;
             receiveQ.notifyAll();
         }
     }

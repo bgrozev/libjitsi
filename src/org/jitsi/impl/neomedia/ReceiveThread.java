@@ -18,6 +18,7 @@ package org.jitsi.impl.neomedia;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
 
 import java.io.*;
 import java.net.*;
@@ -29,6 +30,8 @@ import java.util.*;
  */
 public class ReceiveThread
 {
+    private static final Logger logger
+        = Logger.getLogger(ReceiveThread.class);
     private final DatagramSocket socket;
     private final PacketPool packetPool;
     private final PacketSwitch packetSwitch;
@@ -67,6 +70,8 @@ public class ReceiveThread
      */
     private void runInReceiveThread()
     {
+        logger
+            .warn("XXX starting receive thread, ms=" + mediaStream.hashCode());
         RawPacket[] array = new RawPacket[1];
         while (!closed)
         {

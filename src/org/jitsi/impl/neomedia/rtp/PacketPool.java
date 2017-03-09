@@ -32,12 +32,16 @@ import java.util.concurrent.*;
  */
 public class PacketPool
 {
-    private final static PacketPool globalPool = new PacketPool(-1, null);
+    private final static PacketPool globalPool;
 
     /**
      * The pool of <tt>RawPacket</tt> instances to reduce their allocations and
      * garbage collection.
      */
+    static
+    {
+        globalPool = new PacketPool(1000, null);
+    }
     private final Queue<RawPacket> queue;
     private final int maxSize;
     private final PacketPool parent;
@@ -65,13 +69,20 @@ public class PacketPool
         byte[] buf = pkt.getBuffer();
         if (buf == null || buf.length < size + 40)
         {
-            buf = new byte[Math.min(size + 40, 1600)];
+            buf = new byte[Math.max(size + 40, 1600)];
             pkt.setBuffer(buf);
         }
 
         pkt.setOffset(20);
         pkt.setLength(size);
+        cleanUp(pkt);
         return pkt;
+    }
+
+    private void cleanUp(RawPacket pkt)
+    {
+        pkt.setContext(null);
+        pkt.setMediaStream(null);
     }
 
     /**
@@ -81,6 +92,7 @@ public class PacketPool
      */
     public boolean returnPacket(RawPacket pkt)
     {
+        cleanUp(pkt);
         if (queue.offer(pkt))
         {
             return true;

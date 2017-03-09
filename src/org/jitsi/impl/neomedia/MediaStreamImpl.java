@@ -163,6 +163,7 @@ public class MediaStreamImpl
     private ReceiveThread receiveThread;
     private SendThread sendThread;
     private DatagramSocket socket;
+    private RawPacketFilter filter;
 
     /**
      * Initializes a new <tt>MediaStreamImpl</tt> instance which will use the
@@ -180,6 +181,7 @@ public class MediaStreamImpl
     {
         this.mediaType = mediaType;
         this.packetSwitch = Objects.requireNonNull(packetSwitch, "packetSwitch");
+        packetSwitch.addMediaStream(this);
 
         this.srtpControl = srtpControl;
         this.srtpControl.registerUser(this);
@@ -363,6 +365,7 @@ public class MediaStreamImpl
             return;
         }
 
+        packetSwitch.removeMediaStream(this);
         if (sendThread != null)
         {
             sendThread.close();
@@ -1133,9 +1136,29 @@ public class MediaStreamImpl
     }
 
     @Override
-    public boolean writePacket(RawPacket pkt, MediaStream source, boolean needToCopy)
+    public boolean writePacket(RawPacket pkt, boolean needToCopy)
     {
-        // add to the send thread
+        boolean accept = filter == null || filter.accept(pkt);
+
+        if (accept)
+        {
+            RawPacket pktToSend = pkt;
+            if (needToCopy)
+            {
+                pktToSend = packetSwitch.getPacketPool().getRawPacket(pkt.getLength());
+                System.arraycopy(pkt.getBuffer(), pkt.getOffset(),
+                                 pktToSend.getBuffer(), pktToSend.getOffset(),
+                                 pkt.getLength());
+                pktToSend.setMediaStream(pkt.getMediaStream());
+            }
+            sendThread.addPacket(pktToSend);
+        }
+
+        if (!needToCopy)
+        {
+            packetSwitch.getPacketPool().returnPacket(pkt);
+        }
+
         return true;
     }
 
@@ -1155,5 +1178,11 @@ public class MediaStreamImpl
     public void setSocket(DatagramSocket socket)
     {
         this.socket = socket;
+    }
+
+    @Override
+    public void setRawPacketFilter(RawPacketFilter filter)
+    {
+        this.filter = filter;
     }
 }

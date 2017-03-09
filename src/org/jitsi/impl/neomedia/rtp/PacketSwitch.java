@@ -18,6 +18,7 @@ package org.jitsi.impl.neomedia.rtp;
 import org.ice4j.util.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.util.Logger;
 
 
 /**
@@ -28,6 +29,8 @@ import org.jitsi.util.*;
  */
 public class PacketSwitch
 {
+    private static final Logger logger
+        = Logger.getLogger(PacketSwitch.class);
     private MediaStream[] mediaStreams = new MediaStream[0];
     private final Object mediaStreamsSyncRoot = new Object();
     private final PacketPool packetPool = new PacketPool(1000, null);
@@ -74,6 +77,7 @@ public class PacketSwitch
 
     public boolean addPacket(RawPacket pkt)
     {
+        logger.warn("XXX add packet from MS" +pkt.getMediaStream().hashCode());
         queue.add(pkt);
         return true;
     }
@@ -83,14 +87,21 @@ public class PacketSwitch
         MediaStream[] mediaStreams = this.mediaStreams;
 
         MediaStream source = pkt.getMediaStream();
+        if (source == null)
+        {
+            logger.warn("pkt with no source");
+            new Throwable().printStackTrace();
+        }
+
         for (int i = 0; i < mediaStreams.length; i++)
         {
             MediaStream ms = mediaStreams[i];
             if (!ms.equals(source))
             {
                 boolean skipCopy = i == mediaStreams.length-1
-                    || (i == mediaStreams.length - 2 && source.equals(mediaStreams[i+1]));
-                ms.writePacket(pkt, source, !skipCopy);
+                    || (i == mediaStreams.length - 2 && source != null
+                        && source.equals(mediaStreams[i+1]));
+                ms.writePacket(pkt, !skipCopy);
             }
         }
         return true;

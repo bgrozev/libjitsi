@@ -655,8 +655,6 @@ public class DtlsControlImpl
     {
         super.doCleanup();
 
-        setConnector(null);
-
         synchronized (this)
         {
             disposed = true;
@@ -746,15 +744,6 @@ public class DtlsControlImpl
     public boolean requiresSecureSignalingTransport()
     {
         return true;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setConnector(AbstractRTPConnector connector)
-    {
-        properties.put(Properties.CONNECTOR_PNAME, connector);
     }
 
     /**
@@ -981,5 +970,19 @@ public class DtlsControlImpl
             }
         }
         return b;
+    }
+
+    MediaStream getMediaStream()
+    {
+        synchronized (users)
+        {
+            for (Object o : users)
+            {
+                if (o instanceof MediaStream)
+                    return (MediaStream) o;
+            }
+        }
+
+        return null;
     }
 }

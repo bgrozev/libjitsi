@@ -338,9 +338,10 @@ public interface MediaStream
      */
     void clearDynamicRTPPayloadTypes();
 
-    boolean writePacket(RawPacket pkt, MediaStream source, boolean needToCopy);
+    boolean writePacket(RawPacket pkt, boolean needToCopy);
     PacketSwitch getPacketSwitch();
     DatagramSocket getSocket();
     void setSocket(DatagramSocket socket);
     void setLocalSSRC(long ssrc);
+    void setRawPacketFilter(RawPacketFilter filter);
 }
