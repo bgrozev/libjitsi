@@ -24,8 +24,6 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.stats.*;
 
-import javax.print.attribute.standard.*;
-
 /**
  * The <tt>MediaStream</tt> class represents a (generally) bidirectional RTP
  * stream between exactly two parties. The class reflects one media stream, in
@@ -217,73 +215,11 @@ public interface MediaStream
     Object getProperty(String propertyName);
 
     /**
-     * Returns the address that this stream is sending RTCP traffic to.
-     *
-     * @return an <tt>InetSocketAddress</tt> instance indicating the address
-     * that we are sending RTCP packets to.
-     */
-    InetSocketAddress getRemoteControlAddress();
-
-    /**
-     * Returns the address that this stream is sending RTP traffic to.
-     *
-     * @return an <tt>InetSocketAddress</tt> instance indicating the address
-     * that we are sending RTP packets to.
-     */
-    InetSocketAddress getRemoteDataAddress();
-
-    /**
-     * Gets the synchronization source (SSRC) identifier of the remote peer or
-     * <tt>-1</tt> if that identifier is not yet known at this point in the
-     * execution.
-     * <p>
-     * <b>Warning</b>: A <tt>MediaStream</tt> may receive multiple RTP streams
-     * and may thus have multiple remote SSRCs. Since it is not clear how this
-     * <tt>MediaStream</tt> instance chooses which of the multiple remote SSRCs
-     * to be returned by the method, it is advisable to always consider
-     * {@link #getRemoteSourceIDs()} first.
-     * </p>
-     *
-     * @return the synchronization source (SSRC) identifier of the remote peer
-     * or <tt>-1</tt> if that identifier is not yet known at this point in the
-     * execution
-     */
-    long getRemoteSourceID();
-
-    /**
-     * Gets the synchronization source (SSRC) identifiers of the remote peer.
-     *
-     * @return the synchronization source (SSRC) identifiers of the remote peer
-     */
-    List<Long> getRemoteSourceIDs();
-
-    /**
-     * Gets the {@code StreamRTPManager} which is to forward RTP and RTCP
-     * traffic between this and other {@code MediaStream}s.
-     *
-     * @return the {@code StreamRTPManager} which is to forward RTP and RTCP
-     * traffic between this and other {@code MediaStream}s
-     */
-    StreamRTPManager getStreamRTPManager();
-
-    /**
      * The <tt>ZrtpControl</tt> which controls the ZRTP for this stream.
      *
      * @return the <tt>ZrtpControl</tt> which controls the ZRTP for this stream
      */
     SrtpControl getSrtpControl();
-
-    /**
-     * Returns the target of this <tt>MediaStream</tt> to which it is to send
-     * and from which it is to receive data (e.g. RTP) and control data (e.g.
-     * RTCP).
-     *
-     * @return the <tt>MediaStreamTarget</tt> describing the data
-     * (e.g. RTP) and the control data (e.g. RTCP) locations to which this
-     * <tt>MediaStream</tt> is to send and from which it is to receive
-     * @see MediaStream#setTarget(MediaStreamTarget)
-     */
-    MediaStreamTarget getTarget();
 
     /**
      * Determines whether {@link #start()} has been called on this
@@ -303,23 +239,6 @@ public interface MediaStream
      * @param listener the listener that we'd like to remove.
      */
     void removePropertyChangeListener(PropertyChangeListener listener);
-
-    /**
-     * Removes the <tt>ReceiveStream</tt> with SSRC <tt>ssrc</tt>, if there is
-     * such a <tt>ReceiveStream</tt>, from the receive streams of this
-     * <tt>MediaStream</tt>
-     * @param ssrc the SSRC for which to remove a <tt>ReceiveStream</tt>
-     */
-    void removeReceiveStreamForSsrc(long ssrc);
-
-    /**
-     * Sets the <tt>StreamConnector</tt> to be used by this <tt>MediaStream</tt>
-     * for sending and receiving media.
-     *
-     * @param connector the <tt>StreamConnector</tt> to be used by this
-     * <tt>MediaStream</tt> for sending and receiving media
-     */
-    void setConnector(StreamConnector connector);
 
     /**
      * Sets the direction in which media in this <tt>MediaStream</tt> is to be
@@ -356,24 +275,6 @@ public interface MediaStream
     void setProperty(String propertyName, Object value);
 
     /**
-     * Sets the <tt>RTPTranslator</tt> which is to forward RTP and RTCP traffic
-     * between this and other <tt>MediaStream</tt>s.
-     *
-     * @param rtpTranslator the <tt>RTPTranslator</tt> which is to forward RTP
-     * and RTCP traffic between this and other <tt>MediaStream</tt>s
-     */
-    void setRTPTranslator(RTPTranslator rtpTranslator);
-
-    /**
-     * Gets the {@link RTPTranslator} which forwards RTP and RTCP traffic
-     * between this and other {@code MediaStream}s.
-     *
-     * @return the {@link RTPTranslator} which forwards RTP and RTCP traffic
-     * between this and other {@code MediaStream}s or {@code null}
-     */
-    RTPTranslator getRTPTranslator();
-
-    /**
      * Sets the <tt>SSRCFactory</tt> which is to generate new synchronization
      * source (SSRC) identifiers.
      * 
@@ -383,16 +284,6 @@ public interface MediaStream
      * synchronization source (SSRC) identifiers
      */
     void setSSRCFactory(SSRCFactory ssrcFactory);
-
-    /**
-     * Sets the target of this <tt>MediaStream</tt> to which it is to send and
-     * from which it is to receive data (e.g. RTP) and control data (e.g. RTCP).
-     *
-     * @param target the <tt>MediaStreamTarget</tt> describing the data
-     * (e.g. RTP) and the control data (e.g. RTCP) locations to which this
-     * <tt>MediaStream</tt> is to send and from which it is to receive
-     */
-    void setTarget(MediaStreamTarget target);
 
     /**
      * Starts capturing media from this stream's <tt>MediaDevice</tt> and then
@@ -481,4 +372,5 @@ public interface MediaStream
 
     public boolean writePacket(RawPacket pkt, MediaStream source, boolean needToCopy);
     public PacketSwitch getPacketSwitch();
+    public DatagramSocket getSocket();
 }

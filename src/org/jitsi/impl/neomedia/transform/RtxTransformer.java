@@ -246,6 +246,7 @@ public class RtxTransformer
      */
     private long getRtxSsrc(RawPacket pkt)
     {
+        /* FFFF (jesus fucking christ what is this?)
         StreamRTPManager receiveRTPManager = mediaStream
             .getRTPTranslator()
             .findStreamRTPManagerByReceiveSSRC(pkt.getSSRC());
@@ -275,6 +276,8 @@ public class RtxTransformer
         }
 
         return encoding.getRTXSSRC();
+        */
+        return -1;
     }
     /**
      * Retransmits a packet to {@link #mediaStream}. If the destination supports
@@ -563,6 +566,7 @@ public class RtxTransformer
      */
     public void sendPadding(long ssrc, long bytes)
     {
+        /* FFFF
         StreamRTPManager receiveRTPManager = mediaStream
             .getRTPTranslator()
             .findStreamRTPManagerByReceiveSSRC((int) ssrc);
@@ -607,13 +611,14 @@ public class RtxTransformer
         {
             try
             {
-                mediaStream.injectPacket(pkts[i], /* data */ true, this);
+                mediaStream.injectPacket(pkts[i], true, this);
             }
             catch (TransmissionFailedException tfe)
             {
                 logger.warn("Failed to retransmit a packet.");
             }
         }
+        */
     }
 
     /**

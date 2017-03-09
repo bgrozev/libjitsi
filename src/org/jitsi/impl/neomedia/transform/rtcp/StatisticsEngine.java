@@ -18,7 +18,6 @@ package org.jitsi.impl.neomedia.transform.rtcp;
 import java.io.*;
 import java.util.*;
 
-import javax.media.control.*;
 import javax.media.rtp.*;
 
 import net.sf.fmj.media.rtp.*;
@@ -463,6 +462,7 @@ public class StatisticsEngine
     {
         RTCPExtendedReport.VoIPMetricsReportBlock voipMetrics = null;
 
+        /* FFFF XR not supported
         if (MediaType.AUDIO.equals(mediaType))
         {
             ReceiveStream receiveStream
@@ -474,6 +474,7 @@ public class StatisticsEngine
                     = createVoIPMetricsReportBlock(senderSSRC, receiveStream);
             }
         }
+        */
         return voipMetrics;
     }
 

@@ -67,7 +67,7 @@ public class SendThread
                                  });
     }
 
-    private boolean writePacket(RawPacket pkt)
+    boolean writePacket(RawPacket pkt)
     {
         TransformEngine transformEngine = mediaStream.getTransformEngineChain();
         boolean rtcp = RTCPPacketPredicate.INSTANCE.test(pkt);

@@ -20,8 +20,6 @@ import java.security.*;
 
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.impl.neomedia.format.*;
-import org.jitsi.impl.neomedia.rtp.translator.*;
-import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
@@ -118,97 +116,6 @@ public class MediaServiceImpl
     }
 
     /**
-     * Create a <tt>MediaStream</tt> instance.
-     *
-     * @return a newly-created <tt>MediaStream</tt> which will use the specified
-     * <tt>device</tt> for capture and playback of media
-     */
-    public MediaStream createMediaStream()
-    {
-        return createMediaStream(null, null, null);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Implements {@link MediaService#createMediaStream(MediaType)}. Initializes
-     * a new <tt>AudioMediaStreamImpl</tt> or <tt>VideoMediaStreamImpl</tt> in
-     * accord with <tt>mediaType</tt>
-     */
-    public MediaStream createMediaStream(MediaType mediaType)
-    {
-        return createMediaStream(null, mediaType, null);
-    }
-
-    /**
-     * Creates a new <tt>MediaStream</tt> instance.
-     *
-     * @param connector the <tt>StreamConnector</tt> that the new
-     * <tt>MediaStream</tt> instance is to use for sending and receiving media
-     * @return a new <tt>MediaStream</tt> instance
-     */
-    public MediaStream createMediaStream(StreamConnector connector)
-    {
-        return createMediaStream(connector, null, null);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public MediaStream createMediaStream(
-            StreamConnector connector,
-            MediaType mediaType)
-    {
-        return createMediaStream(connector, mediaType, null);
-    }
-
-    /**
-     * Creates a new <tt>MediaStream</tt> instance which will use the specified
-     * <tt>MediaDevice</tt> for both capture and playback of media exchanged
-     * via the specified <tt>StreamConnector</tt>.
-     *
-     * @param connector the <tt>StreamConnector</tt> that the new
-     * <tt>MediaStream</tt> instance is to use for sending and receiving media
-     * @param srtpControl a control which is already created, used to control
-     * the SRTP operations.
-     *
-     * @return a new <tt>MediaStream</tt> instance
-     */
-    public MediaStream createMediaStream(
-            StreamConnector connector,
-            SrtpControl srtpControl)
-    {
-        return createMediaStream(connector, null, srtpControl);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public MediaStream createMediaStream(
-            StreamConnector connector,
-            MediaType mediaType,
-            SrtpControl srtpControl)
-    {
-        // Make sure that mediaType and device are in accord.
-        if (mediaType == null)
-        {
-            // TODO FIXME
-            mediaType = MediaType.AUDIO;
-            //throw new NullPointerException("mediaType");
-        }
-
-        switch (mediaType)
-        {
-        case AUDIO:
-            return new AudioMediaStreamImpl(connector, srtpControl);
-        case VIDEO:
-            return new VideoMediaStreamImpl(connector, srtpControl);
-        default:
-            return null;
-        }
-    }
-
-    /**
      * Returns the current encoding configuration -- the instance that contains
      * the global settings. Note that any changes made to this instance will
      * have immediate effect on the configuration.
@@ -236,33 +143,6 @@ public class MediaServiceImpl
         if (formatFactory == null)
             formatFactory = new MediaFormatFactoryImpl();
         return formatFactory;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public SrtpControl createSrtpControl(SrtpControlType srtpControlType)
-    {
-        switch (srtpControlType)
-        {
-        case DTLS_SRTP:
-            return new DtlsControlImpl();
-        default:
-            return null;
-        }
-    }
-
-    /**
-     * Initializes a new <tt>RTPTranslator</tt> which is to forward RTP and RTCP
-     * traffic between multiple <tt>MediaStream</tt>s.
-     *
-     * @return a new <tt>RTPTranslator</tt> which is to forward RTP and RTCP
-     * traffic between multiple <tt>MediaStream</tt>s
-     * @see MediaService#createRTPTranslator()
-     */
-    public RTPTranslator createRTPTranslator()
-    {
-        return new RTPTranslatorImpl();
     }
 
     /**

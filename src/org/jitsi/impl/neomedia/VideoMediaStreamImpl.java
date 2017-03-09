@@ -15,6 +15,7 @@
  */
 package org.jitsi.impl.neomedia;
 
+import java.net.*;
 import java.util.*;
 
 import org.jitsi.impl.neomedia.rtcp.*;
@@ -118,15 +119,12 @@ public class VideoMediaStreamImpl
      * the specified <tt>MediaDevice</tt> for both capture and playback of video
      * exchanged via the specified <tt>StreamConnector</tt>.
      *
-     * @param connector the <tt>StreamConnector</tt> the new instance is to use
-     * for sending and receiving video
      * @param srtpControl a control which is already created, used to control
      * the srtp operations.
      */
-    public VideoMediaStreamImpl(
-            StreamConnector connector, SrtpControl srtpControl)
+    public VideoMediaStreamImpl(SrtpControl srtpControl, DatagramSocket socket)
     {
-        super(connector, srtpControl, MediaType.VIDEO);
+        super(srtpControl, MediaType.VIDEO, null, socket);
 
         // Register the RemoteBitrateEstimator with the
         // RecurringRunnableExecutor.

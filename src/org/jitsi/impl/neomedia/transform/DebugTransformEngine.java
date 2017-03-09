@@ -59,6 +59,12 @@ public class DebugTransformEngine implements TransformEngine
     private static final Logger logger
         = Logger.getLogger(DebugTransformEngine.class);
 
+    private static final InetSocketAddress defaultLocalAddress
+        = new InetSocketAddress("127.0.0.1", 1234);
+
+    private static final InetSocketAddress defaultRemoteAddress
+        = new InetSocketAddress("1.0.0.127", 4321);
+
     /**
      * The <tt>MediaStream</tt> that owns this instance.
      */
@@ -172,70 +178,15 @@ public class DebugTransformEngine implements TransformEngine
             return pkt;
         }
 
-        InetSocketAddress src;
-        InetSocketAddress dst;
-
-        // When the caller is a sender:
-        if (data)
-        {
-            InetSocketAddress localDataAddress
-                = mediaStream.getLocalDataAddress();
-            if (localDataAddress == null)
-            {
-                logger.warn("Not logging a packet because the local data " +
-                        "address is null");
-                return pkt;
-            }
-
-            MediaStreamTarget target = mediaStream.getTarget();
-            if (target == null)
-            {
-                logger.warn("Not logging a packet because the media stream " +
-                        "target is null.");
-                return pkt;
-            }
-
-            InetSocketAddress targetDataAddress = target.getDataAddress();
-            if (targetDataAddress == null)
-            {
-                logger.warn("Not logging a packet because the media stream " +
-                        "target address is null.");
-                return pkt;
-            }
-
-            src = localDataAddress;
-            dst = targetDataAddress;
-        }
-        else
-        {
-            InetSocketAddress localControlAddress
-                = mediaStream.getLocalControlAddress();
-            if (localControlAddress == null)
-            {
-                logger.warn("Not logging a packet because the local data " +
-                        "address is null");
-                return pkt;
-            }
-
-            MediaStreamTarget target = mediaStream.getTarget();
-            if (target == null)
-            {
-                logger.warn("Not logging a packet because the media stream " +
-                        "target is null.");
-                return pkt;
-            }
-
-            InetSocketAddress targetControlAddress = target.getControlAddress();
-            if (targetControlAddress == null)
-            {
-                logger.warn("Not logging a packet because the media stream " +
-                        "target address is null.");
-                return pkt;
-            }
-
-            src = localControlAddress;
-            dst = targetControlAddress;
-        }
+        DatagramSocket socket = mediaStream.getSocket();
+        InetSocketAddress src
+            = socket == null
+                ? defaultLocalAddress
+                : (InetSocketAddress) socket.getLocalSocketAddress();
+        InetSocketAddress dst
+            = socket == null
+                ? defaultRemoteAddress
+                : (InetSocketAddress) socket.getRemoteSocketAddress();
 
         // When the caller is a receiver, the situation is the exact
         // opposite of when the caller is a sender.
@@ -249,14 +200,10 @@ public class DebugTransformEngine implements TransformEngine
 
         pktLogging.logPacket(
                 PacketLoggingService.ProtocolName.ARBITRARY,
-                (src != null)
-                ? src.getAddress().getAddress()
-                : new byte[] { 0, 0, 0, 0 },
-                (src != null) ? src.getPort() : 1,
-                (dst != null)
-                ? dst.getAddress().getAddress()
-                : new byte[] { 0, 0, 0, 0 },
-                (dst != null) ? dst.getPort() : 1,
+                src.getAddress().getAddress(),
+                src.getPort(),
+                dst.getAddress().getAddress(),
+                dst.getPort(),
                 PacketLoggingService.TransportName.UDP,
                 sender,
                 pkt.getBuffer().clone(),

@@ -17,7 +17,6 @@ package org.jitsi.impl.neomedia.rtcp;
 
 import net.sf.fmj.media.rtp.*;
 import org.jitsi.impl.neomedia.*;
-import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.rtp.*;
@@ -25,7 +24,6 @@ import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
 import org.jitsi.util.function.*;
 
-import javax.media.rtp.*;
 import java.util.*;
 
 /**
@@ -44,11 +42,6 @@ public class RTCPReceiverFeedbackTermination
     private static final int MAX_RTCP_REPORT_BLOCKS = 31;
 
     /**
-     * The minimum number of RTCP report blocks that an RR can contain.
-     */
-    private static final int MIN_RTCP_REPORT_BLOCKS = 0;
-
-    /**
      * The reporting period for RRs and REMBs.
      */
     private static final long REPORT_PERIOD_MS = 500;
@@ -60,11 +53,9 @@ public class RTCPReceiverFeedbackTermination
     private final RTCPGenerator generator = new RTCPGenerator();
 
     /**
-     * A reusable array that holds {@link #MIN_RTCP_REPORT_BLOCKS}
-     * <tt>RTCPReportBlock</tt>s.
      */
-    private static final RTCPReportBlock[] MIN_RTCP_REPORT_BLOCKS_ARRAY
-        = new RTCPReportBlock[MIN_RTCP_REPORT_BLOCKS];
+    private static final RTCPReportBlock[] EMPTY_RTCP_REPORT_BLOCKS
+        = new RTCPReportBlock[0];
 
     /**
      * The {@link Logger} used by the {@link RTCPReceiverFeedbackTermination}
@@ -160,6 +151,7 @@ public class RTCPReceiverFeedbackTermination
      */
     private long getSenderSSRC()
     {
+        /* FFFF why the fuck do we continue to introduce these dependencies?
         StreamRTPManager streamRTPManager = stream.getStreamRTPManager();
         if (streamRTPManager == null)
         {
@@ -167,6 +159,8 @@ public class RTCPReceiverFeedbackTermination
         }
 
         return stream.getStreamRTPManager().getLocalSSRC();
+        */
+        return stream.getLocalSourceID();
     }
 
 
@@ -227,6 +221,7 @@ public class RTCPReceiverFeedbackTermination
      */
     private RTCPReportBlock[] makeReportBlocks()
     {
+        /* FFFF must implement generation of RR
         // State validation.
         if (stream == null)
         {
@@ -289,6 +284,8 @@ public class RTCPReceiverFeedbackTermination
         }
 
         return reportBlocks.toArray(new RTCPReportBlock[reportBlocks.size()]);
+        */
+        return EMPTY_RTCP_REPORT_BLOCKS;
     }
 
     /**

@@ -21,7 +21,6 @@ import java.util.List;
 import net.sf.fmj.media.rtp.*;
 
 import org.jitsi.impl.neomedia.rtcp.*;
-import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.impl.neomedia.stats.*;
 import org.jitsi.service.neomedia.*;
@@ -171,6 +170,7 @@ public class MediaStreamStatsImpl
 
             // If we are translating, the NTP timestamps we include in outgoing
             // SRs are based on the actual sender's clock.
+            /* FFFF
             RTPTranslator translator = mediaStreamImpl.getRTPTranslator();
             if (translator != null)
             {
@@ -207,6 +207,7 @@ public class MediaStreamStatsImpl
                     return -1;
                 }
             }
+            */
 
             long arrivalNtp = TimeUtils.toNtpTime(arrivalMs);
             long arrival = TimeUtils.toNtpShortFormat(arrivalNtp);

@@ -15,22 +15,15 @@
  */
 package org.jitsi.impl.neomedia;
 
-import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.concurrent.locks.*;
 
 import javax.media.*;
-import javax.media.protocol.*;
-import javax.media.rtp.*;
-import javax.media.rtp.event.*;
-import javax.media.rtp.rtcp.*;
 
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.impl.neomedia.format.*;
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.stats.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.impl.neomedia.transform.csrc.*;
@@ -54,9 +47,6 @@ import org.jitsi.util.*;
  */
 public class MediaStreamImpl
     extends AbstractMediaStream
-    implements ReceiveStreamListener,
-               SessionListener,
-               RemoteListener
 {
     /**
      * The <tt>Logger</tt> used by the <tt>MediaStreamImpl</tt> class and its
@@ -105,51 +95,6 @@ public class MediaStreamImpl
      * Engine chain overriding payload type if needed.
      */
     private PayloadTypeTransformEngine ptTransformEngine;
-
-    /**
-     * The <tt>ReceiveStream</tt>s this instance plays back on its associated
-     * <tt>MediaDevice</tt>. The (read and write) accesses to the field are to
-     * be synchronized using {@link #receiveStreamsLock}.
-     */
-    private final List<ReceiveStream> receiveStreams = new LinkedList<>();
-
-    /**
-     * The <tt>ReadWriteLock</tt> which synchronizes the (read and write)
-     * accesses to {@link #receiveStreams}.
-     */
-    private final ReadWriteLock receiveStreamsLock
-        = new ReentrantReadWriteLock();
-
-    /**
-     * The SSRC identifiers of the party that we are exchanging media with.
-     *
-     * XXX(gp) I'm sure there's a reason why we do it the way we do it, but we
-     * might want to re-think about how we manage receive SSRCs. We keep track
-     * of the receive SSRC in at least 3 places, in the MediaStreamImpl (we have
-     * a remoteSourceIDs vector), in StreamRTPManager.receiveSSRCs and in
-     * RtpChannel.receiveSSRCs. TAG(cat4-remote-ssrc-hurricane)
-     *
-     */
-    private final Vector<Long> remoteSourceIDs = new Vector<>(1, 1);
-
-    /**
-     * The <tt>RTPConnector</tt> through which this instance sends and receives
-     * RTP and RTCP traffic. The instance is a <tt>TransformConnector</tt> in
-     * order to also enable packet transformations.
-     */
-    private AbstractRTPConnector rtpConnector;
-
-    /**
-     * The one and only <tt>MediaStreamTarget</tt> this instance has added as a
-     * target in {@link #rtpConnector}.
-     */
-    private MediaStreamTarget rtpConnectorTarget;
-
-    /**
-     * The <tt>RTPManager</tt> which utilizes {@link #rtpConnector} and sends
-     * and receives RTP and RTCP traffic on behalf of this <tt>MediaStream</tt>.
-     */
-    private StreamRTPManager rtpManager;
 
     /**
      * The <tt>SrtpControl</tt> which controls the SRTP functionality of this
@@ -250,16 +195,11 @@ public class MediaStreamImpl
      * specified <tt>MediaDevice</tt> for both capture and playback of media
      * exchanged via the specified <tt>StreamConnector</tt>.
      *
-     * @param connector the <tt>StreamConnector</tt> the new instance is to use
-     * for sending and receiving media or <tt>null</tt> if the
-     * <tt>StreamConnector</tt> of the new instance is to not be set at
-     * initialization time but specified later on
      * @param srtpControl an existing control instance to control the ZRTP
      * operations or <tt>null</tt> if a new control instance is to be created by
      * the new <tt>MediaStreamImpl</tt>
      */
     public MediaStreamImpl(
-            StreamConnector connector,
             SrtpControl srtpControl,
             MediaType mediaType,
             PacketSwitch packetSwitch,
@@ -275,9 +215,6 @@ public class MediaStreamImpl
         this.srtpControl.registerUser(this);
 
         this.mediaStreamStatsImpl = new MediaStreamStats2Impl(this);
-
-        if (connector != null)
-            setConnector(connector);
 
         if (logger.isTraceEnabled())
         {
@@ -336,16 +273,6 @@ public class MediaStreamImpl
                     fecTransformEngine.setOutgoingPT(rtpPayloadType);
                 }
             }
-
-            if (rtpManager != null)
-            {
-                // We do not add RED and FEC payload types to the RTP Manager
-                // because RED and FEC packets will be handled before they get
-                // to the RTP Manager.
-                rtpManager.addFormat(
-                        mediaFormatImpl.getFormat(),
-                        rtpPayloadType);
-            }
         }
 
         this.onDynamicPayloadTypesChanged();
@@ -371,50 +298,6 @@ public class MediaStreamImpl
     {
         if (ptTransformEngine != null)
             ptTransformEngine.addPTMappingOverride(originalPt, overloadPt);
-    }
-
-    /**
-     * Adds a specific <tt>ReceiveStream</tt> to {@link #receiveStreams}.
-     *
-     * @param receiveStream the <tt>ReceiveStream</tt> to add
-     * @return <tt>true</tt> if <tt>receiveStreams</tt> changed as a result of
-     * the method call; otherwise, <tt>false</tt>
-     */
-    private boolean addReceiveStream(ReceiveStream receiveStream)
-    {
-        Lock writeLock = receiveStreamsLock.writeLock();
-        boolean added = false;
-
-        writeLock.lock();
-        try
-        {
-            if (!receiveStreams.contains(receiveStream))
-            {
-                receiveStreams.add(receiveStream);
-            }
-        }
-        finally
-        {
-            writeLock.unlock();
-        }
-        return added;
-    }
-
-    /**
-     * Sets the remote SSRC identifier and fires the corresponding
-     * <tt>PropertyChangeEvent</tt>.
-     *
-     * @param remoteSourceID the SSRC identifier that this stream will be using
-     * in outgoing RTP packets from now on.
-     */
-    protected void addRemoteSourceID(long remoteSourceID)
-    {
-        Long oldValue = getRemoteSourceID();
-
-        if(!remoteSourceIDs.contains(remoteSourceID))
-            remoteSourceIDs.add(remoteSourceID);
-
-        firePropertyChange(PNAME_REMOTE_SSRC, oldValue, remoteSourceID);
     }
 
     /**
@@ -525,79 +408,6 @@ public class MediaStreamImpl
                 t.close();
             transformEngineChain = null;
         }
-
-        if (rtpManager != null)
-        {
-            rtpManager.removeReceiveStreamListener(this);
-            rtpManager.removeSessionListener(this);
-            rtpManager.removeRemoteListener(this);
-            try
-            {
-                rtpManager.dispose();
-                rtpManager = null;
-            }
-            catch (Throwable t)
-            {
-                if (t instanceof ThreadDeath)
-                    throw (ThreadDeath) t;
-
-                /*
-                 * Analysis of heap dumps and application logs suggests that
-                 * RTPManager#dispose() may throw an exception after a
-                 * NullPointerException has been thrown by SendStream#close() as
-                 * documented in
-                 * #stopSendStreams(Iterable<SendStream>, boolean). It is
-                 * unknown at the time of this writing whether we can do
-                 * anything to prevent the exception here but it is clear that,
-                 * if we let it go through, we will not release at least one
-                 * capture device (i.e. we will at least skip the
-                 * MediaDeviceSession#close() bellow). For example, if the
-                 * exception is thrown for the audio stream in a call, its
-                 * capture device will not be released and any video stream will
-                 * not get its #close() method called at all.
-                 */
-                logger.error("Failed to dispose of RTPManager", t);
-            }
-        }
-
-        /*
-         * XXX Call AbstractRTPConnector#removeTargets() after
-         * StreamRTPManager#dispose(). Otherwise, the latter will try to send an
-         * RTCP BYE and there will be no targets to send it to.
-         */
-        if (rtpConnector != null)
-            rtpConnector.removeTargets();
-        rtpConnectorTarget = null;
-    }
-
-    /**
-     * Performs any optional configuration on a specific
-     * <tt>RTPConnectorInputStream</tt> of an <tt>RTPManager</tt> to be used by
-     * this <tt>MediaStreamImpl</tt>. Allows extenders to override.
-     *
-     * @param dataInputStream the <tt>RTPConnectorInputStream</tt> to be used
-     * by an <tt>RTPManager</tt> of this <tt>MediaStreamImpl</tt> and to be
-     * configured
-     */
-    protected void configureDataInputStream(
-            RTPConnectorInputStream<?> dataInputStream)
-    {
-        dataInputStream.setPriority(getPriority());
-    }
-
-    /**
-     * Performs any optional configuration on a specific
-     * <tt>RTPConnectorOuputStream</tt> of an <tt>RTPManager</tt> to be used by
-     * this <tt>MediaStreamImpl</tt>. Allows extenders to override.
-     *
-     * @param dataOutputStream the <tt>RTPConnectorOutputStream</tt> to be used
-     * by an <tt>RTPManager</tt> of this <tt>MediaStreamImpl</tt> and to be
-     * configured
-     */
-    protected void configureDataOutputStream(
-            RTPConnectorOutputStream dataOutputStream)
-    {
-        dataOutputStream.setPriority(getPriority());
     }
 
     protected SsrcTransformEngine createSsrcTransformEngine()
@@ -761,121 +571,6 @@ public class MediaStreamImpl
     }
 
     /**
-     * Sets the target of this <tt>MediaStream</tt> to which it is to send and
-     * from which it is to receive data (e.g. RTP) and control data (e.g. RTCP).
-     * In contrast to {@link #setTarget(MediaStreamTarget)}, sets the specified
-     * <tt>target</tt> on this <tt>MediaStreamImpl</tt> even if its current
-     * <tt>target</tt> is equal to the specified one.
-     *
-     * @param target the <tt>MediaStreamTarget</tt> describing the data
-     * (e.g. RTP) and the control data (e.g. RTCP) locations to which this
-     * <tt>MediaStream</tt> is to send and from which it is to receive
-     * @see MediaStreamImpl#setTarget(MediaStreamTarget)
-     */
-    private void doSetTarget(MediaStreamTarget target)
-    {
-        InetSocketAddress newDataAddr;
-        InetSocketAddress newControlAddr;
-        AbstractRTPConnector connector = rtpConnector;
-
-        if (target == null)
-        {
-            newDataAddr = null;
-            newControlAddr = null;
-        }
-        else
-        {
-            newDataAddr = target.getDataAddress();
-            newControlAddr = target.getControlAddress();
-        }
-
-        /*
-         * Invoke AbstractRTPConnector#removeTargets() if the new value does
-         * actually remove an RTP or RTCP target in comparison to the old value.
-         * If the new value is equal to the oldValue or adds an RTP or RTCP
-         * target (i.e. the old value does not specify the respective RTP or
-         * RTCP target and the new value does), then removeTargets is
-         * unnecessary and would've needlessly allowed a (tiny) interval of
-         * (execution) time (between removeTargets and addTarget) without a
-         * target.
-         */
-        if (rtpConnectorTarget != null && connector != null)
-        {
-            InetSocketAddress oldDataAddr = rtpConnectorTarget.getDataAddress();
-            boolean removeTargets
-                = (oldDataAddr == null)
-                    ? (newDataAddr != null)
-                    : !oldDataAddr.equals(newDataAddr);
-
-            if (!removeTargets)
-            {
-                InetSocketAddress oldControlAddr
-                    = rtpConnectorTarget.getControlAddress();
-
-                removeTargets
-                    = (oldControlAddr == null)
-                        ? (newControlAddr != null)
-                        : !oldControlAddr.equals(newControlAddr);
-            }
-
-            if (removeTargets)
-            {
-                connector.removeTargets();
-                rtpConnectorTarget = null;
-            }
-        }
-
-        boolean targetIsSet;
-
-        if (target == null || newDataAddr == null || connector == null)
-        {
-            targetIsSet = true;
-        }
-        else
-        {
-            try
-            {
-                InetAddress controlInetAddr;
-                int controlPort;
-
-                if (newControlAddr == null)
-                {
-                    controlInetAddr = null;
-                    controlPort = 0;
-                }
-                else
-                {
-                    controlInetAddr = newControlAddr.getAddress();
-                    controlPort = newControlAddr.getPort();
-                }
-
-                connector.addTarget(
-                        new SessionAddress(
-                                newDataAddr.getAddress(), newDataAddr.getPort(),
-                                controlInetAddr, controlPort));
-                targetIsSet = true;
-            }
-            catch (IOException ioe)
-            {
-                targetIsSet = false;
-                logger.error("Failed to set target " + target, ioe);
-            }
-        }
-        if (targetIsSet)
-        {
-            rtpConnectorTarget = target;
-
-            if (logger.isTraceEnabled())
-            {
-                logger.trace(
-                        "Set target of " + getClass().getSimpleName()
-                            + " with hashCode " + hashCode()
-                            + " to " + target);
-            }
-        }
-    }
-
-    /**
      * Returns a map containing all currently active <tt>RTPExtension</tt>s in
      * use by this stream.
      *
@@ -982,62 +677,6 @@ public class MediaStreamImpl
     }
 
     /**
-     * Gets the local address that this stream is sending RTCP traffic from.
-     *
-     * @return an <tt>InetSocketAddress</tt> instance indicating the local
-     * address that this stream is sending RTCP traffic from.
-     */
-    public InetSocketAddress getLocalControlAddress()
-    {
-        StreamConnector connector =
-            (rtpConnector != null) ? rtpConnector.getConnector() : null;
-
-        if(connector != null)
-        {
-            if(connector.getDataSocket() != null)
-            {
-                return (InetSocketAddress)connector.getControlSocket().
-                    getLocalSocketAddress();
-            }
-            else if(connector.getDataTCPSocket() != null)
-            {
-                return (InetSocketAddress)connector.getControlTCPSocket().
-                    getLocalSocketAddress();
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Gets the local address that this stream is sending RTP traffic from.
-     *
-     * @return an <tt>InetSocketAddress</tt> instance indicating the local
-     * address that this stream is sending RTP traffic from.
-     */
-    public InetSocketAddress getLocalDataAddress()
-    {
-        StreamConnector connector =
-            (rtpConnector != null) ? rtpConnector.getConnector() : null;
-
-        if(connector != null)
-        {
-            if(connector.getDataSocket() != null)
-            {
-                return (InetSocketAddress)connector.getDataSocket().
-                    getLocalSocketAddress();
-            }
-            else if(connector.getDataTCPSocket() != null)
-            {
-                return (InetSocketAddress)connector.getDataTCPSocket().
-                    getLocalSocketAddress();
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * Gets the synchronization source (SSRC) identifier of the local peer or
      * <tt>-1</tt> if it is not yet known.
      *
@@ -1065,83 +704,6 @@ public class MediaStreamImpl
     }
 
     /**
-     * Used to set the priority of the receive/send streams. Underling
-     * implementations can override this and return different than
-     * current default value.
-     *
-     * @return the priority for the current thread.
-     */
-    protected int getPriority()
-    {
-        return Thread.currentThread().getPriority();
-    }
-
-    /**
-     * Gets a <tt>ReceiveStream</tt> which this instance plays back on its
-     * associated <tt>MediaDevice</tt> and which has a specific synchronization
-     * source identifier (SSRC).
-     *
-     * @param ssrc the synchronization source identifier of the
-     * <tt>ReceiveStream</tt> to return
-     * @return a <tt>ReceiveStream</tt> which this instance plays back on its
-     * associated <tt>MediaDevice</tt> and which has the specified <tt>ssrc</tt>
-     */
-    public ReceiveStream getReceiveStream(int ssrc)
-    {
-        for (ReceiveStream receiveStream : getReceiveStreams())
-        {
-            int receiveStreamSSRC = (int) receiveStream.getSSRC();
-
-            if (receiveStreamSSRC == ssrc)
-                return receiveStream;
-        }
-        return null;
-    }
-
-    /**
-     * Gets a list of the <tt>ReceiveStream</tt>s this instance plays back on
-     * its associated <tt>MediaDevice</tt>.
-     *
-     * @return a list of the <tt>ReceiveStream</tt>s this instance plays back on
-     * its associated <tt>MediaDevice</tt>
-     */
-    public Collection<ReceiveStream> getReceiveStreams()
-    {
-        Set<ReceiveStream> receiveStreams = new HashSet<>();
-
-        // This instance maintains a list of the ReceiveStreams.
-        Lock readLock = receiveStreamsLock.readLock();
-
-        readLock.lock();
-        try
-        {
-            receiveStreams.addAll(this.receiveStreams);
-        }
-        finally
-        {
-            readLock.unlock();
-        }
-
-        /*
-         * Unfortunately, it has been observed that sometimes there are valid
-         * ReceiveStreams in this instance which are not returned by the
-         * rtpManager.
-         */
-        StreamRTPManager rtpManager = queryRTPManager();
-
-        if (rtpManager != null)
-        {
-            @SuppressWarnings("unchecked")
-            Collection<ReceiveStream> rtpManagerReceiveStreams
-                = rtpManager.getReceiveStreams();
-
-            receiveStreams.addAll(rtpManagerReceiveStreams);
-        }
-
-        return receiveStreams;
-    }
-
-    /**
      * Creates the <tt>REDTransformEngine</tt> for this <tt>MediaStream</tt>.
      * By default none is created, allows extenders to implement it.
      * @return the <tt>REDTransformEngine</tt> created.
@@ -1149,166 +711,6 @@ public class MediaStreamImpl
     protected REDTransformEngine getRedTransformEngine()
     {
         return null;
-    }
-
-    /**
-     * Gets the address that this stream is sending RTCP traffic to.
-     *
-     * @return an <tt>InetSocketAddress</tt> instance indicating the address
-     * that this stream is sending RTCP traffic to
-     * @see MediaStream#getRemoteControlAddress()
-     */
-    @Override
-    public InetSocketAddress getRemoteControlAddress()
-    {
-        if (rtpConnector != null)
-        {
-            StreamConnector connector = rtpConnector.getConnector();
-
-            if (connector != null)
-            {
-                if (connector.getDataSocket() != null)
-                {
-                    return
-                        (InetSocketAddress)
-                            connector
-                                .getControlSocket()
-                                    .getRemoteSocketAddress();
-                }
-                else if (connector.getDataTCPSocket() != null)
-                {
-                    return
-                        (InetSocketAddress)
-                            connector
-                                .getControlTCPSocket()
-                                    .getRemoteSocketAddress();
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Gets the address that this stream is sending RTP traffic to.
-     *
-     * @return an <tt>InetSocketAddress</tt> instance indicating the address
-     * that this stream is sending RTP traffic to
-     * @see MediaStream#getRemoteDataAddress()
-     */
-    @Override
-    public InetSocketAddress getRemoteDataAddress()
-    {
-        StreamConnector connector =
-            (rtpConnector != null) ? rtpConnector.getConnector() : null;
-
-        if(connector != null)
-        {
-            if(connector.getDataSocket() != null)
-            {
-                return (InetSocketAddress)connector.getDataSocket().
-                    getRemoteSocketAddress();
-            }
-            else if(connector.getDataTCPSocket() != null)
-            {
-                return (InetSocketAddress)connector.getDataTCPSocket().
-                    getRemoteSocketAddress();
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Returns the last element of {@link #getRemoteSourceIDs()} which may or
-     * may not always be appropriate.
-     *
-     * @see MediaStream#getRemoteSourceID()
-     */
-    @Override
-    public long getRemoteSourceID()
-    {
-        return remoteSourceIDs.isEmpty() ? -1 : remoteSourceIDs.lastElement();
-    }
-
-    /**
-     * Gets the synchronization source (SSRC) identifiers of the remote peer.
-     *
-     * @return the synchronization source (SSRC) identifiers of the remote peer
-     */
-    @Override
-    public List<Long> getRemoteSourceIDs()
-    {
-        /*
-         * TODO Returning an unmodifiable view of remoteSourceIDs prevents
-         * modifications of private state from the outside but it does not
-         * prevent ConcurrentModificationException.
-         */
-        return Collections.unmodifiableList(remoteSourceIDs);
-    }
-
-    /**
-     * Gets the <tt>RTPConnector</tt> through which this instance sends and
-     * receives RTP and RTCP traffic.
-     *
-     * @return the <tt>RTPConnector</tt> through which this instance sends and
-     * receives RTP and RTCP traffic
-     */
-    protected AbstractRTPConnector getRTPConnector()
-    {
-        return rtpConnector;
-    }
-
-    /**
-     * Gets the <tt>RTPManager</tt> instance which sends and receives RTP and
-     * RTCP traffic on behalf of this <tt>MediaStream</tt>. If the
-     * <tt>RTPManager</tt> does not exist yet, it is created.
-     *
-     * @return the <tt>RTPManager</tt> instance which sends and receives RTP and
-     * RTCP traffic on behalf of this <tt>MediaStream</tt>
-     */
-    public StreamRTPManager getRTPManager()
-    {
-        if (rtpManager == null)
-        {
-            RTPConnector rtpConnector = getRTPConnector();
-
-            if (rtpConnector == null)
-                throw new IllegalStateException("rtpConnector");
-
-            rtpManager = new StreamRTPManager(this, rtpTranslator);
-
-            registerCustomCodecFormats(rtpManager);
-
-            rtpManager.addReceiveStreamListener(this);
-            rtpManager.addSessionListener(this);
-            rtpManager.addRemoteListener(this);
-
-            rtpManager.setSSRCFactory(ssrcFactory);
-
-            rtpManager.initialize(rtpConnector);
-
-            // JMF initializes the local SSRC upon #initialize(RTPConnector) so
-            // now's the time to ask. As JMF stores the SSRC as a 32-bit signed
-            // integer value, convert it to unsigned.
-            long localSSRC = rtpManager.getLocalSSRC();
-
-            setLocalSourceID(
-                    (localSSRC == Long.MAX_VALUE)
-                        ? -1
-                        : (localSSRC & 0xFFFFFFFFL));
-        }
-        return rtpManager;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public StreamRTPManager getStreamRTPManager()
-    {
-        return queryRTPManager();
     }
 
     /**
@@ -1320,22 +722,6 @@ public class MediaStreamImpl
     public SrtpControl getSrtpControl()
     {
         return srtpControl;
-    }
-
-    /**
-     * Returns the target of this <tt>MediaStream</tt> to which it is to send
-     * and from which it is to receive data (e.g. RTP) and control data (e.g.
-     * RTCP).
-     *
-     * @return the <tt>MediaStreamTarget</tt> describing the data
-     * (e.g. RTP) and the control data (e.g. RTCP) locations to which this
-     * <tt>MediaStream</tt> is to send and from which it is to receive
-     * @see MediaStream#setTarget(MediaStreamTarget)
-     */
-    @Override
-    public MediaStreamTarget getTarget()
-    {
-        return rtpConnectorTarget;
     }
 
     /**
@@ -1352,256 +738,6 @@ public class MediaStreamImpl
     public boolean isStarted()
     {
         return started;
-    }
-
-    /**
-     * Gets the <tt>RTPManager</tt> instance which sends and receives RTP and
-     * RTCP traffic on behalf of this <tt>MediaStream</tt>. If the
-     * <tt>RTPManager</tt> does not exist yet, it is not created.
-     *
-     * @return the <tt>RTPManager</tt> instance which sends and receives RTP and
-     * RTCP traffic on behalf of this <tt>MediaStream</tt>
-     */
-    public StreamRTPManager queryRTPManager()
-    {
-        return rtpManager;
-    }
-
-    /**
-     * Registers any custom JMF <tt>Format</tt>s with a specific
-     * <tt>RTPManager</tt>. Extenders should override in order to register their
-     * own customizations and should call back to this super implementation
-     * during the execution of their override in order to register the
-     * associations defined in this instance of (dynamic) RTP payload types to
-     * <tt>MediaFormat</tt>s.
-     *
-     * @param rtpManager the <tt>RTPManager</tt> to register any custom JMF
-     * <tt>Format</tt>s with
-     */
-    protected void registerCustomCodecFormats(StreamRTPManager rtpManager)
-    {
-        synchronized (dynamicRTPPayloadTypes)
-        {
-            for (Map.Entry<Byte, MediaFormat> dynamicRTPPayloadType
-                    : dynamicRTPPayloadTypes.entrySet())
-            {
-                @SuppressWarnings("unchecked")
-                MediaFormatImpl<? extends Format> mediaFormatImpl
-                    = (MediaFormatImpl<? extends Format>)
-                        dynamicRTPPayloadType.getValue();
-                Format format = mediaFormatImpl.getFormat();
-
-                rtpManager.addFormat(format, dynamicRTPPayloadType.getKey());
-            }
-        }
-    }
-
-    /**
-     * Removes a specific <tt>ReceiveStream</tt> from {@link #receiveStreams}.
-     *
-     * @param receiveStream the <tt>ReceiveStream</tt> to remove
-     * @return <tt>true</tt> if <tt>receiveStreams</tt> changed as a result of
-     * the method call; otherwise, <tt>false</tt>
-     */
-    private boolean removeReceiveStream(ReceiveStream receiveStream)
-    {
-        Lock writeLock = receiveStreamsLock.writeLock();
-        boolean removed = false;
-
-        writeLock.lock();
-        try
-        {
-            receiveStreams.remove(receiveStream);
-        }
-        finally
-        {
-            writeLock.unlock();
-        }
-        return removed;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void removeReceiveStreamForSsrc(long ssrc)
-    {
-        ReceiveStream toRemove = getReceiveStream((int) ssrc);
-
-        if (toRemove != null)
-            removeReceiveStream(toRemove);
-    }
-
-    /**
-     * Notifies this <tt>MediaStream</tt> implementation that its
-     * <tt>RTPConnector</tt> instance has changed from a specific old value to a
-     * specific new value. Allows extenders to override and perform additional
-     * processing after this <tt>MediaStream</tt> has changed its
-     * <tt>RTPConnector</tt> instance.
-     *
-     * @param oldValue the <tt>RTPConnector</tt> of this <tt>MediaStream</tt>
-     * implementation before it got changed to <tt>newValue</tt>
-     * @param newValue the current <tt>RTPConnector</tt> of this
-     * <tt>MediaStream</tt> which replaced <tt>oldValue</tt>
-     */
-    protected void rtpConnectorChanged(
-            AbstractRTPConnector oldValue,
-            AbstractRTPConnector newValue)
-    {
-        if (newValue != null)
-        {
-            /*
-             * Register the transform engines that we will be using in this
-             * stream.
-             */
-            if(newValue instanceof RTPTransformUDPConnector)
-            {
-                transformEngineChain = createTransformEngineChain();
-                ((RTPTransformUDPConnector) newValue)
-                        .setEngine(transformEngineChain);
-            }
-
-            if (rtpConnectorTarget != null)
-                doSetTarget(rtpConnectorTarget);
-
-            // Trigger the re-configuration of RTP header extensions
-            addRTPExtension((byte)0, null);
-        }
-
-        srtpControl.setConnector(newValue);
-
-        /*
-         * TODO The following is a very ugly way to expose the RTPConnector
-         * created by this instance so it may be configured from outside the
-         * class hierarchy. That's why the property in use bellow is not defined
-         * as a well-known constant and is to be considered internal and likely
-         * to be removed in a future revision.
-         */
-        try
-        {
-            firePropertyChange(
-                    MediaStreamImpl.class.getName() + ".rtpConnector",
-                    oldValue,
-                    newValue);
-        }
-        catch (Throwable t)
-        {
-            if (t instanceof InterruptedException)
-                Thread.currentThread().interrupt();
-            else if (t instanceof ThreadDeath)
-                throw (ThreadDeath) t;
-            else
-                logger.error(t);
-        }
-    }
-
-    /**
-     * Notifies this instance that its {@link #rtpConnector} has created a new
-     * <tt>RTPConnectorInputStream</tt> either RTP or RTCP.
-     *
-     * @param inputStream the new <tt>RTPConnectorInputStream</tt> instance
-     * created by the <tt>rtpConnector</tt> of this instance
-     * @param data <tt>true</tt> if <tt>inputStream</tt> will be used for RTP
-     * or <tt>false</tt> for RTCP
-     */
-    private void rtpConnectorInputStreamCreated(
-            RTPConnectorInputStream<?> inputStream,
-            boolean data)
-    {
-        /*
-         * TODO The following is a very ugly way to expose the
-         * RTPConnectorInputStreams created by the rtpConnector of this
-         * instance so they may be configured from outside the class hierarchy
-         * (e.g. to invoke addDatagramPacketFilter). That's why the property in
-         * use bellow is not defined as a well-known constant and is to be
-         * considered internal and likely to be removed in a future revision.
-         */
-        try
-        {
-            firePropertyChange(
-                    MediaStreamImpl.class.getName() + ".rtpConnector."
-                        + (data ? "data" : "control") + "InputStream",
-                    null,
-                    inputStream);
-        }
-        catch (Throwable t)
-        {
-            if (t instanceof InterruptedException)
-                Thread.currentThread().interrupt();
-            else if (t instanceof ThreadDeath)
-                throw (ThreadDeath) t;
-            else
-                logger.error(t);
-        }
-    }
-
-    /**
-     * Sets the <tt>StreamConnector</tt> to be used by this instance for sending
-     * and receiving media.
-     *
-     * @param connector the <tt>StreamConnector</tt> to be used by this instance
-     * for sending and receiving media
-     */
-    @Override
-    public void setConnector(StreamConnector connector)
-    {
-        if (connector == null)
-            throw new NullPointerException("connector");
-
-        AbstractRTPConnector oldValue = rtpConnector;
-
-        // Is the StreamConnector really changing?
-        if ((oldValue != null) && (oldValue.getConnector() == connector))
-            return;
-
-        switch (connector.getProtocol())
-        {
-        case UDP:
-            rtpConnector
-                = new RTPTransformUDPConnector(connector)
-                {
-                    @Override
-                    protected RTPConnectorUDPInputStream createControlInputStream()
-                        throws IOException
-                    {
-                        RTPConnectorUDPInputStream s
-                            = super.createControlInputStream();
-
-                        rtpConnectorInputStreamCreated(s, false);
-                        return s;
-                    }
-
-                    @Override
-                    protected RTPConnectorUDPInputStream createDataInputStream()
-                        throws IOException
-                    {
-                        RTPConnectorUDPInputStream s
-                            = super.createDataInputStream();
-
-                        rtpConnectorInputStreamCreated(s, true);
-                        if (s != null)
-                            configureDataInputStream(s);
-                        return s;
-                    }
-
-                    @Override
-                    protected TransformUDPOutputStream createDataOutputStream()
-                        throws IOException
-                    {
-                        TransformUDPOutputStream s
-                            = super.createDataOutputStream();
-
-                        if (s != null)
-                            configureDataOutputStream(s);
-                        return s;
-                    }
-                };
-            break;
-        default:
-            throw new IllegalArgumentException("connector");
-        }
-
-        rtpConnectorChanged(oldValue, rtpConnector);
     }
 
     /**
@@ -1653,13 +789,6 @@ public class MediaStreamImpl
         if (started)
             start(this.direction);
 
-        // Make sure that RTP is filtered in accord with the direction of this
-        // MediaStream, so that we don't have to worry about, for example, new
-        // ReceiveStreams being created while in sendonly/inactive.
-        AbstractRTPConnector connector = getRTPConnector();
-
-        if (connector != null)
-            connector.setDirection(direction);
     }
 
     /**
@@ -1690,39 +819,7 @@ public class MediaStreamImpl
         if (this.ssrcFactory != ssrcFactory)
         {
             this.ssrcFactory = ssrcFactory;
-
-            StreamRTPManager rtpManager = this.rtpManager;
-            RTPTranslator translator = rtpTranslator;
-
-            if (rtpManager != null)
-                rtpManager.setSSRCFactory(ssrcFactory);
-            else if (translator instanceof RTPTranslatorImpl)
-                ((RTPTranslatorImpl)translator).setSSRCFactory(ssrcFactory);
         }
-    }
-
-    /**
-     * Sets the target of this <tt>MediaStream</tt> to which it is to send and
-     * from which it is to receive data (e.g. RTP) and control data (e.g. RTCP).
-     *
-     * @param target the <tt>MediaStreamTarget</tt> describing the data
-     * (e.g. RTP) and the control data (e.g. RTCP) locations to which this
-     * <tt>MediaStream</tt> is to send and from which it is to receive
-     * @see MediaStream#setTarget(MediaStreamTarget)
-     */
-    @Override
-    public void setTarget(MediaStreamTarget target)
-    {
-        // Short-circuit if setting the same target.
-        if (target == null)
-        {
-            if (rtpConnectorTarget == null)
-                return;
-        }
-        else if (target.equals(rtpConnectorTarget))
-            return;
-
-        doSetTarget(target);
     }
 
     /**
@@ -1755,80 +852,14 @@ public class MediaStreamImpl
         if (direction == null)
             throw new NullPointerException("direction");
 
-        /*
-         * If the local peer is the focus of a conference for which it is to
-         * perform RTP translation even without generating media to be sent, it
-         * should create its StreamRTPManager.
-         */
-        boolean getRTPManagerForRTPTranslator = true;
-
         if (direction.allowsReceiving()
                 && ((startedDirection == null)
                         || !startedDirection.allowsReceiving()))
         {
-            /*
-             * The startReceiveStreams method will be called so the
-             * getRTPManager method will be called as part of the execution of
-             * the former.
-             */
-            getRTPManagerForRTPTranslator = false;
-
-            startReceiveStreams();
-
             if (MediaDirection.SENDONLY.equals(startedDirection))
                 startedDirection = MediaDirection.SENDRECV;
             else if (startedDirection == null)
                 startedDirection = MediaDirection.RECVONLY;
-        }
-
-        /*
-         * If the local peer is the focus of a conference for which it is to
-         * perform RTP translation even without generating media to be sent, it
-         * should create its StreamRTPManager.
-         */
-        if (getRTPManagerForRTPTranslator && (rtpTranslator != null))
-            getRTPManager();
-    }
-
-    /**
-     * Starts the <tt>ReceiveStream</tt>s that this instance is receiving from
-     * its remote peer. By design, a <tt>MediaStream</tt> instance is associated
-     * with a single <tt>ReceiveStream</tt> at a time. However, the
-     * <tt>ReceiveStream</tt>s are created by <tt>RTPManager</tt> and it tracks
-     * multiple <tt>ReceiveStream</tt>s. In practice, the <tt>RTPManager</tt> of
-     * this <tt>MediaStreamImpl</tt> will have a single <tt>ReceiveStream</tt>
-     * in its list.
-     */
-    private void startReceiveStreams()
-    {
-        /*
-         * The ReceiveStreams originate from RtpManager, make sure that there is
-         * an actual RTPManager to initialize ReceiveStreams which are then to
-         * be started.
-         */
-        getRTPManager();
-
-        for (ReceiveStream receiveStream : getReceiveStreams())
-        {
-            try
-            {
-                DataSource receiveStreamDataSource
-                    = receiveStream.getDataSource();
-
-                /*
-                 * For an unknown reason, the stream DataSource can be null
-                 * at the end of the Call after re-INVITEs have been
-                 * handled.
-                 */
-                if (receiveStreamDataSource != null)
-                    receiveStreamDataSource.start();
-            }
-            catch (IOException ioex)
-            {
-                logger.warn(
-                        "Failed to start receive stream " + receiveStream,
-                        ioex);
-            }
         }
     }
 
@@ -1860,9 +891,6 @@ public class MediaStreamImpl
         if (direction == null)
             throw new NullPointerException("direction");
 
-        if (rtpManager == null)
-            return;
-
         if ((MediaDirection.SENDRECV.equals(direction)
                     || MediaDirection.SENDONLY.equals(direction))
                 && (MediaDirection.SENDRECV.equals(startedDirection)
@@ -1879,165 +907,11 @@ public class MediaStreamImpl
             && (MediaDirection.SENDRECV.equals(startedDirection)
                     || MediaDirection.RECVONLY.equals(startedDirection)))
         {
-            stopReceiveStreams();
-
             if (MediaDirection.SENDRECV.equals(startedDirection))
                 startedDirection = MediaDirection.SENDONLY;
             else if (MediaDirection.RECVONLY.equals(startedDirection))
                 startedDirection = null;
         }
-    }
-
-    /**
-     * Stops the <tt>ReceiveStream</tt>s that this instance is receiving from
-     * its remote peer. By design, a <tt>MediaStream</tt> instance is associated
-     * with a single <tt>ReceiveStream</tt> at a time. However, the
-     * <tt>ReceiveStream</tt>s are created by <tt>RTPManager</tt> and it tracks
-     * multiple <tt>ReceiveStream</tt>s. In practice, the <tt>RTPManager</tt> of
-     * this <tt>MediaStreamImpl</tt> will have a single <tt>ReceiveStream</tt>
-     * in its list.
-     */
-    private void stopReceiveStreams()
-    {
-        for (ReceiveStream receiveStream : getReceiveStreams())
-        {
-            try
-            {
-                if (logger.isTraceEnabled())
-                {
-                    logger.trace(
-                            "Stopping receive stream with hashcode "
-                                + receiveStream.hashCode());
-                }
-
-                DataSource receiveStreamDataSource
-                    = receiveStream.getDataSource();
-
-                /*
-                 * For an unknown reason, the stream DataSource can be null
-                 * at the end of the Call after re-INVITEs have been
-                 * handled.
-                 */
-                if (receiveStreamDataSource != null)
-                    receiveStreamDataSource.stop();
-            }
-            catch (IOException ioex)
-            {
-                logger.warn(
-                        "Failed to stop receive stream " + receiveStream,
-                        ioex);
-            }
-        }
-    }
-
-    /**
-     * Notifies this <tt>ReceiveStreamListener</tt> that the <tt>RTPManager</tt>
-     * it is registered with has generated an event related to a
-     * <tt>ReceiveStream</tt>.
-     *
-     * @param ev the <tt>ReceiveStreamEvent</tt> which specifies the
-     * <tt>ReceiveStream</tt> that is the cause of the event and the very type
-     * of the event
-     * @see ReceiveStreamListener#update(ReceiveStreamEvent)
-     */
-    @Override
-    public void update(ReceiveStreamEvent ev)
-    {
-        if (ev instanceof NewReceiveStreamEvent)
-        {
-            // XXX we might consider not adding (or not starting) new
-            // ReceiveStreams unless this MediaStream's direction allows
-            // receiving.
-
-            ReceiveStream receiveStream = ev.getReceiveStream();
-
-            if (receiveStream != null)
-            {
-                long receiveStreamSSRC = 0xFFFFFFFFL & receiveStream.getSSRC();
-
-                if (logger.isTraceEnabled())
-                {
-                    logger.trace(
-                            "Received new ReceiveStream with ssrc "
-                                + receiveStreamSSRC);
-                }
-
-                addRemoteSourceID(receiveStreamSSRC);
-
-                addReceiveStream(receiveStream);
-            }
-        }
-        else if (ev instanceof TimeoutEvent)
-        {
-            ReceiveStream evReceiveStream = ev.getReceiveStream();
-            Participant participant = ev.getParticipant();
-
-            List<ReceiveStream> receiveStreamsToRemove = new ArrayList<>();
-
-            if (evReceiveStream != null)
-            {
-                receiveStreamsToRemove.add(evReceiveStream);
-            }
-            else if (participant != null)
-            {
-                Collection<ReceiveStream> receiveStreams = getReceiveStreams();
-                Collection<?> rtpManagerReceiveStreams
-                    = rtpManager.getReceiveStreams();
-
-                for (ReceiveStream receiveStream: receiveStreams)
-                {
-                    if(participant.equals(receiveStream.getParticipant())
-                            && !participant.getStreams().contains(
-                                    receiveStream)
-                            && !rtpManagerReceiveStreams.contains(
-                                    receiveStream))
-                    {
-                        receiveStreamsToRemove.add(receiveStream);
-                    }
-                }
-            }
-
-            for(ReceiveStream receiveStream : receiveStreamsToRemove)
-            {
-                removeReceiveStream(receiveStream);
-
-                // The DataSource needs to be disconnected, because otherwise
-                // its RTPStream thread will stay alive. We do this here because
-                // we observed that in certain situations it fails to be done
-                // earlier.
-                DataSource dataSource = receiveStream.getDataSource();
-
-                if (dataSource != null)
-                    dataSource.disconnect();
-            }
-        }
-    }
-
-    /**
-     * Method called back in the RemoteListener to notify
-     * listener of all RTP Remote Events.RemoteEvents are one of
-     * ReceiverReportEvent, SenderReportEvent or RemoteCollisionEvent
-     *
-     * @param ev the event
-     */
-    @Override
-    public void update(RemoteEvent ev)
-    {
-    }
-
-    /**
-     * Notifies this <tt>SessionListener</tt> that the <tt>RTPManager</tt> it is
-     * registered with has generated an event which pertains to the session as a
-     * whole and does not belong to a <tt>ReceiveStream</tt> or a
-     * <tt>SendStream</tt> or a remote participant necessarily.
-     *
-     * @param ev the <tt>SessionEvent</tt> which specifies the source and the
-     * very type of the event
-     * @see SessionListener#update(SessionEvent)
-     */
-    @Override
-    public void update(SessionEvent ev)
-    {
     }
 
     /**
@@ -2074,16 +948,6 @@ public class MediaStreamImpl
                 throw new NullPointerException("pkt");
             }
 
-            AbstractRTPConnector rtpConnector = getRTPConnector();
-
-            if (rtpConnector == null)
-                throw new IllegalStateException("rtpConnector");
-
-            RTPConnectorOutputStream outputStream
-                = data
-                    ? rtpConnector.getDataOutputStream(false)
-                    : rtpConnector.getControlOutputStream(false);
-
             // We utilize TransformEngineWrapper so it is possible to have after
             // wrapped. Unless we wrap after, pkt will go through the whole
             // TransformEngine chain (which is obviously not the idea of the
@@ -2100,13 +964,10 @@ public class MediaStreamImpl
                 }
             }
 
-            outputStream.write(
-                    pkt.getBuffer(),
-                    pkt.getOffset(),
-                    pkt.getLength(),
-                    /* context */ after);
+            pkt.setContext(after);
+            sendThread.writePacket(pkt);
         }
-        catch (IllegalStateException | IOException | NullPointerException e)
+        catch (IllegalStateException | NullPointerException e)
         {
             throw new TransmissionFailedException(e);
         }
@@ -2299,11 +1160,6 @@ public class MediaStreamImpl
     /**
      * {@inheritDoc}
      * <br/>
-     * Note that the chain is only initialized when a {@link StreamConnector} is
-     * set for the {@link MediaStreamImpl} via
-     * {@link #setConnector(StreamConnector)} or by passing a non-null connector
-     * to the constructor. Until the chain is initialized, this method will
-     * return null.
      */
     @Override
     public TransformEngineChain getTransformEngineChain()
@@ -2447,5 +1303,11 @@ public class MediaStreamImpl
     public PacketSwitch getPacketSwitch()
     {
         return packetSwitch;
+    }
+
+    @Override
+    public DatagramSocket getSocket()
+    {
+        return socket;
     }
 }

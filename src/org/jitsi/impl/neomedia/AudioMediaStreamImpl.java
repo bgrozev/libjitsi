@@ -15,16 +15,12 @@
  */
 package org.jitsi.impl.neomedia;
 
+import java.net.*;
 import java.util.*;
 
-import javax.media.*;
-import javax.media.format.*;
-
-import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.impl.neomedia.transform.csrc.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.event.*;
 import org.jitsi.util.*;
 
@@ -39,33 +35,6 @@ import org.jitsi.util.*;
 public class AudioMediaStreamImpl
     extends MediaStreamImpl
 {
-    /**
-     * List of RTP format strings which are supported by SIP Communicator in
-     * addition to the JMF standard formats.
-     *
-     * @see #registerCustomCodecFormats(StreamRTPManager)
-     */
-    private static final AudioFormat[] CUSTOM_CODEC_FORMATS
-        = new AudioFormat[]
-                {
-                    /*
-                     * these formats are specific, since RTP uses format numbers
-                     * with no parameters.
-                     */
-                    new AudioFormat(
-                            Constants.ALAW_RTP,
-                            8000,
-                            8,
-                            1,
-                            Format.NOT_SPECIFIED,
-                            AudioFormat.SIGNED),
-                    new AudioFormat(
-                            Constants.G722_RTP,
-                            8000,
-                            Format.NOT_SPECIFIED /* sampleSizeInBits */,
-                            1)
-                };
-
     /**
      * The <tt>Logger</tt> used by the <tt>AudioMediaStreamImpl</tt> class and
      * its instances for logging output.
@@ -86,16 +55,12 @@ public class AudioMediaStreamImpl
      * the specified <tt>MediaDevice</tt> for both capture and playback of audio
      * exchanged via the specified <tt>StreamConnector</tt>.
      *
-     * @param connector the <tt>StreamConnector</tt> the new instance is to use
-     * for sending and receiving audio
      * @param srtpControl a control which is already created, used to control
      * the srtp operations.
      */
-    public AudioMediaStreamImpl(
-            StreamConnector connector,
-            SrtpControl srtpControl)
+    public AudioMediaStreamImpl(SrtpControl srtpControl, DatagramSocket socket)
     {
-        super(connector, srtpControl, MediaType.AUDIO);
+        super(srtpControl, MediaType.AUDIO, null, socket);
     }
 
     /**
@@ -198,40 +163,6 @@ public class AudioMediaStreamImpl
         if (ssrcTransformEngine == null)
             ssrcTransformEngine = new SsrcTransformEngine(this);
         return ssrcTransformEngine;
-    }
-
-    /**
-     * Registers {@link #CUSTOM_CODEC_FORMATS} with a specific
-     * <tt>RTPManager</tt>.
-     *
-     * @param rtpManager the <tt>RTPManager</tt> to register
-     * {@link #CUSTOM_CODEC_FORMATS} with
-     * @see MediaStreamImpl#registerCustomCodecFormats(StreamRTPManager)
-     */
-    @Override
-    protected void registerCustomCodecFormats(StreamRTPManager rtpManager)
-    {
-        super.registerCustomCodecFormats(rtpManager);
-
-        for (AudioFormat format : CUSTOM_CODEC_FORMATS)
-        {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(
-                        "registering format " + format + " with RTPManager");
-            }
-            /*
-             * NOTE (mkoch@rowa.de): com.sun.media.rtp.RtpSessionMgr.addFormat
-             * leaks memory, since it stores the Format in a static Vector.
-             * AFAIK there is no easy way around it, but the memory impact
-             * should not be too bad.
-             */
-            rtpManager.addFormat(
-                    format,
-                    MediaUtils.getRTPPayloadType(
-                            format.getEncoding(),
-                            format.getSampleRate()));
-        }
     }
 
     /**

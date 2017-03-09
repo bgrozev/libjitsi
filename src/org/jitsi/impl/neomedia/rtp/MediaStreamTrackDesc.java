@@ -15,7 +15,6 @@
  */
 package org.jitsi.impl.neomedia.rtp;
 
-import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 
@@ -170,9 +169,10 @@ public class MediaStreamTrackDesc
             if (maybeSuspended || activated)
             {
                 // FIXME only when suspended encodings are received.
-                ((RTPTranslatorImpl) mediaStreamTrackReceiver.getStream()
-                    .getRTPTranslator()).getRtcpFeedbackMessageSender()
-                    .sendFIR((int) rtpEncodings[0].getPrimarySSRC());
+                // FFFF request keyframe
+                //((RTPTranslatorImpl) mediaStreamTrackReceiver.getStream()
+                //    .getRTPTranslator()).getRtcpFeedbackMessageSender()
+                //    .sendFIR((int) rtpEncodings[0].getPrimarySSRC());
             }
         }
         else
@@ -188,9 +188,10 @@ public class MediaStreamTrackDesc
                 if (!encoding.isActive())
                 {
                     // FIXME only when encodings is received.
-                    ((RTPTranslatorImpl) mediaStreamTrackReceiver.getStream()
-                        .getRTPTranslator()).getRtcpFeedbackMessageSender()
-                        .sendFIR((int) rtpEncodings[0].getPrimarySSRC());
+                    // FFFF request keyframe
+                    //((RTPTranslatorImpl) mediaStreamTrackReceiver.getStream()
+                    //    .getRTPTranslator()).getRtcpFeedbackMessageSender()
+                    //    .sendFIR((int) rtpEncodings[0].getPrimarySSRC());
                 }
             }
             else

@@ -237,9 +237,10 @@ public class SimulcastController
                 return;
             }
 
-            ((RTPTranslatorImpl) sourceTrack.getMediaStreamTrackReceiver()
-                .getStream().getRTPTranslator())
-                .getRtcpFeedbackMessageSender().sendFIR((int) targetSSRC);
+            // FFFF request keyframe
+            //((RTPTranslatorImpl) sourceTrack.getMediaStreamTrackReceiver()
+            //    .getStream().getRTPTranslator())
+            //    .getRtcpFeedbackMessageSender().sendFIR((int) targetSSRC);
         }
     }
 
