@@ -18,6 +18,7 @@ package org.jitsi.impl.neomedia;
 import java.net.*;
 import java.util.*;
 
+import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.impl.neomedia.transform.csrc.*;
 import org.jitsi.service.neomedia.*;
@@ -58,9 +59,9 @@ public class AudioMediaStreamImpl
      * @param srtpControl a control which is already created, used to control
      * the srtp operations.
      */
-    public AudioMediaStreamImpl(SrtpControl srtpControl, DatagramSocket socket)
+    public AudioMediaStreamImpl(SrtpControl srtpControl, PacketSwitch packetSwitch)
     {
-        super(srtpControl, MediaType.AUDIO, null, socket);
+        super(srtpControl, MediaType.AUDIO, packetSwitch);
     }
 
     /**

@@ -63,12 +63,6 @@ public class MediaStreamImpl
         = new Hashtable<>();
 
     /**
-     * The <tt>MediaDirection</tt> in which this <tt>MediaStream</tt> is allowed
-     * to stream media.
-     */
-    private MediaDirection direction;
-
-    /**
      * The <tt>Map</tt> of associations in this <tt>MediaStream</tt> and the
      * <tt>RTPManager</tt> it utilizes of (dynamic) RTP payload types to
      * <tt>MediaFormat</tt>s.
@@ -78,12 +72,8 @@ public class MediaStreamImpl
 
     /**
      * Our own SSRC identifier.
-     *
-     * XXX(gp) how about taking the local source ID directly from
-     * {@link this.rtpManager}, given that it offers this information with its
-     * getLocalSSRC() method? TAG(cat4-local-ssrc-hurricane)
      */
-    private long localSourceID = (new Random().nextInt()) & 0x00000000FFFFFFFFL;
+    private long localSSRC = -1;
 
     /**
      * The MediaStreamStatsImpl object used to compute the statistics about
@@ -103,26 +93,10 @@ public class MediaStreamImpl
     private final SrtpControl srtpControl;
 
     /**
-     * The <tt>SSRCFactory</tt> to be utilized by this instance to generate new
-     * synchronization source (SSRC) identifiers. If <tt>null</tt>, this
-     * instance will employ internal logic to generate new synchronization
-     * source (SSRC) identifiers.
-     */
-    private SSRCFactory ssrcFactory = new SSRCFactoryImpl(localSourceID);
-
-    /**
      * The indicator which determines whether {@link #start()} has been called
      * on this <tt>MediaStream</tt> without {@link #stop()} or {@link #close()}.
      */
     private boolean started = false;
-
-    /**
-     * The <tt>MediaDirection</tt> in which this instance is started. For
-     * example, {@link MediaDirection#SENDRECV} if this instances is both
-     * sending and receiving data (e.g. RTP and RTCP) or
-     * {@link MediaDirection#SENDONLY} if this instance is only sending data.
-     */
-    private MediaDirection startedDirection;
 
     /**
      * Engine chain reading sent RTCP sender reports and stores/prints
@@ -186,9 +160,9 @@ public class MediaStreamImpl
     private final MediaType mediaType;
 
     private final PacketSwitch packetSwitch;
-    private final ReceiveThread receiveThread;
-    private final SendThread sendThread;
-    private final DatagramSocket socket;
+    private ReceiveThread receiveThread;
+    private SendThread sendThread;
+    private DatagramSocket socket;
 
     /**
      * Initializes a new <tt>MediaStreamImpl</tt> instance which will use the
@@ -202,14 +176,10 @@ public class MediaStreamImpl
     public MediaStreamImpl(
             SrtpControl srtpControl,
             MediaType mediaType,
-            PacketSwitch packetSwitch,
-            DatagramSocket socket)
+            PacketSwitch packetSwitch)
     {
         this.mediaType = mediaType;
         this.packetSwitch = Objects.requireNonNull(packetSwitch, "packetSwitch");
-        this.socket = socket;
-        this.receiveThread = new ReceiveThread(this, socket);
-        this.sendThread = new SendThread(this, socket);
 
         this.srtpControl = srtpControl;
         this.srtpControl.registerUser(this);
@@ -383,7 +353,24 @@ public class MediaStreamImpl
     @Override
     public void close()
     {
-        stop();
+        doStop();
+    }
+
+    private void doStop()
+    {
+        if (!started)
+        {
+            return;
+        }
+
+        if (sendThread != null)
+        {
+            sendThread.close();
+        }
+        if (receiveThread != null)
+        {
+            receiveThread.close();
+        }
 
         srtpControl.cleanup(this);
 
@@ -408,6 +395,8 @@ public class MediaStreamImpl
                 t.close();
             transformEngineChain = null;
         }
+
+        started = false;
     }
 
     protected SsrcTransformEngine createSsrcTransformEngine()
@@ -587,19 +576,6 @@ public class MediaStreamImpl
     }
 
     /**
-     * Gets the direction in which this <tt>MediaStream</tt> is allowed to
-     * stream media.
-     *
-     * @return the <tt>MediaDirection</tt> in which this <tt>MediaStream</tt> is
-     * allowed to stream media
-     */
-    @Override
-    public MediaDirection getDirection()
-    {
-        return (direction == null) ? MediaDirection.INACTIVE : direction;
-    }
-
-    /**
      * Returns the payload type number that has been negotiated for the
      * specified <tt>encoding</tt> or <tt>-1</tt> if no payload type has been
      * negotiated for it. If multiple formats match the specified
@@ -677,17 +653,12 @@ public class MediaStreamImpl
     }
 
     /**
-     * Gets the synchronization source (SSRC) identifier of the local peer or
-     * <tt>-1</tt> if it is not yet known.
-     *
-     * @return  the synchronization source (SSRC) identifier of the local peer
-     * or <tt>-1</tt> if it is not yet known
-     * @see MediaStream#getLocalSourceID()
+     * {@inheritDoc}
      */
     @Override
-    public long getLocalSourceID()
+    public long getLocalSSRC()
     {
-        return localSourceID;
+        return localSSRC;
     }
 
     /**
@@ -741,177 +712,46 @@ public class MediaStreamImpl
     }
 
     /**
-     * Sets the direction in which media in this <tt>MediaStream</tt> is to be
-     * streamed. If this <tt>MediaStream</tt> is not currently started, calls to
-     * {@link #start()} later on will start it only in the specified
-     * <tt>direction</tt>. If it is currently started in a direction different
-     * than the specified, directions other than the specified will be stopped.
-     *
-     * @param direction the <tt>MediaDirection</tt> in which this
-     * <tt>MediaStream</tt> is to stream media when it is started
-     * @see MediaStream#setDirection(MediaDirection)
+     * {@inheritDoc}
      */
     @Override
-    public void setDirection(MediaDirection direction)
+    public void setLocalSSRC(long ssrc)
     {
-        if (direction == null)
-            throw new NullPointerException("direction");
-        if(this.direction == direction)
-            return;
-
-        if(logger.isTraceEnabled())
-        {
-            logger.trace(
-                    "Changing direction of stream " + hashCode()
-                        + " from:" + this.direction
-                        + " to:" + direction);
-        }
-
-        this.direction = direction;
-
-        switch (this.direction)
-        {
-        case INACTIVE:
-            stop(MediaDirection.SENDRECV);
-            return;
-        case RECVONLY:
-            stop(MediaDirection.SENDONLY);
-            break;
-        case SENDONLY:
-            stop(MediaDirection.RECVONLY);
-            break;
-        case SENDRECV:
-            break;
-        default:
-            // Don't know what it may be (in the future) so ignore it.
-            return;
-        }
-        if (started)
-            start(this.direction);
-
-    }
-
-    /**
-     * Sets the local SSRC identifier and fires the corresponding
-     * <tt>PropertyChangeEvent</tt>.
-     *
-     * @param localSourceID the SSRC identifier that this stream will be using
-     * in outgoing RTP packets from now on
-     */
-    protected void setLocalSourceID(long localSourceID)
-    {
-        if (this.localSourceID != localSourceID)
-        {
-            Long oldValue = this.localSourceID;
-
-            this.localSourceID = localSourceID;
-
-            firePropertyChange(PNAME_LOCAL_SSRC, oldValue, this.localSourceID);
-        }
+        this.localSSRC = ssrc;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void setSSRCFactory(SSRCFactory ssrcFactory)
-    {
-        if (this.ssrcFactory != ssrcFactory)
-        {
-            this.ssrcFactory = ssrcFactory;
-        }
-    }
-
-    /**
-     * Starts capturing media from this stream's <tt>MediaDevice</tt> and then
-     * streaming it through the local <tt>StreamConnector</tt> toward the
-     * stream's target address and port. Also puts the <tt>MediaStream</tt> in a
-     * listening state which make it play all media received from the
-     * <tt>StreamConnector</tt> on the stream's <tt>MediaDevice</tt>.
-     *
-     * @see MediaStream#start()
-     */
-    @Override
     public void start()
     {
-        start(getDirection());
+        if (started)
+        {
+            throw new IllegalStateException("already started");
+        }
+
+        if (socket == null)
+        {
+            throw new IllegalStateException("socket not set");
+        }
+
+        transformEngineChain = createTransformEngineChain();
+
+        receiveThread = new ReceiveThread(this, socket);
+        sendThread = new SendThread(this, socket);
+
+        logger.info("Started a media stream");
         started = true;
     }
 
     /**
-     * Starts the processing of media in this instance in a specific direction.
-     *
-     * @param direction a <tt>MediaDirection</tt> value which represents the
-     * direction of the processing of media to be started. For example,
-     * {@link MediaDirection#SENDRECV} to start both capture and playback of
-     * media in this instance or {@link MediaDirection#SENDONLY} to only start
-     * the capture of media in this instance
-     */
-    private void start(MediaDirection direction)
-    {
-        if (direction == null)
-            throw new NullPointerException("direction");
-
-        if (direction.allowsReceiving()
-                && ((startedDirection == null)
-                        || !startedDirection.allowsReceiving()))
-        {
-            if (MediaDirection.SENDONLY.equals(startedDirection))
-                startedDirection = MediaDirection.SENDRECV;
-            else if (startedDirection == null)
-                startedDirection = MediaDirection.RECVONLY;
-        }
-    }
-
-    /**
-     * Stops all streaming and capturing in this <tt>MediaStream</tt> and closes
-     * and releases all open/allocated devices/resources. Has no effect if this
-     * <tt>MediaStream</tt> is already closed and is simply ignored.
-     *
-     * @see MediaStream#stop()
+     * {@inheritDoc}
      */
     @Override
     public void stop()
     {
-        stop(MediaDirection.SENDRECV);
-        started = false;
-    }
-
-    /**
-     * Stops the processing of media in this instance in a specific direction.
-     *
-     * @param direction a <tt>MediaDirection</tt> value which represents the
-     * direction of the processing of media to be stopped. For example,
-     * {@link MediaDirection#SENDRECV} to stop both capture and playback of
-     * media in this instance or {@link MediaDirection#SENDONLY} to only stop
-     * the capture of media in this instance
-     */
-    private void stop(MediaDirection direction)
-    {
-        if (direction == null)
-            throw new NullPointerException("direction");
-
-        if ((MediaDirection.SENDRECV.equals(direction)
-                    || MediaDirection.SENDONLY.equals(direction))
-                && (MediaDirection.SENDRECV.equals(startedDirection)
-                        || MediaDirection.SENDONLY.equals(startedDirection)))
-        {
-            if (MediaDirection.SENDRECV.equals(startedDirection))
-                startedDirection = MediaDirection.RECVONLY;
-            else if (MediaDirection.SENDONLY.equals(startedDirection))
-                startedDirection = null;
-        }
-
-        if ((MediaDirection.SENDRECV.equals(direction)
-                || MediaDirection.RECVONLY.equals(direction))
-            && (MediaDirection.SENDRECV.equals(startedDirection)
-                    || MediaDirection.RECVONLY.equals(startedDirection)))
-        {
-            if (MediaDirection.SENDRECV.equals(startedDirection))
-                startedDirection = MediaDirection.SENDONLY;
-            else if (MediaDirection.RECVONLY.equals(startedDirection))
-                startedDirection = null;
-        }
+        doStop();
     }
 
     /**
@@ -1309,5 +1149,11 @@ public class MediaStreamImpl
     public DatagramSocket getSocket()
     {
         return socket;
+    }
+
+    @Override
+    public void setSocket(DatagramSocket socket)
+    {
+        this.socket = socket;
     }
 }

@@ -121,15 +121,6 @@ public interface MediaStream
     Map<Byte, RTPExtension> getActiveRTPExtensions();
 
     /**
-     * Gets the direction in which this <tt>MediaStream</tt> is allowed to
-     * stream media.
-     *
-     * @return the <tt>MediaDirection</tt> in which this <tt>MediaStream</tt> is
-     * allowed to stream media
-     */
-    MediaDirection getDirection();
-
-    /**
      * Gets the existing associations in this <tt>MediaStream</tt> of RTP
      * payload types to <tt>MediaFormat</tt>s. The returned <tt>Map</tt>
      * only contains associations previously added in this instance with
@@ -181,7 +172,7 @@ public interface MediaStream
      * participant or <tt>-1</tt> if that identifier is not yet known at this
      * point.
      */
-    long getLocalSourceID();
+    long getLocalSSRC();
 
     /**
      * Returns a <tt>MediaStreamStats</tt> object used to get statistics about
@@ -241,18 +232,6 @@ public interface MediaStream
     void removePropertyChangeListener(PropertyChangeListener listener);
 
     /**
-     * Sets the direction in which media in this <tt>MediaStream</tt> is to be
-     * streamed. If this <tt>MediaStream</tt> is not currently started, calls to
-     * {@link #start()} later on will start it only in the specified
-     * <tt>direction</tt>. If it is currently started in a direction different
-     * than the specified, directions other than the specified will be stopped.
-     *
-     * @param direction the <tt>MediaDirection</tt> in which this
-     * <tt>MediaStream</tt> is to stream media when it is started
-     */
-    void setDirection(MediaDirection direction);
-
-    /**
      * Sets the name of this stream. Stream names are used by some protocols,
      * for diagnostic purposes mostly. In XMPP for example this is the name of
      * the content element that describes a stream.
@@ -273,17 +252,6 @@ public interface MediaStream
      * <tt>MediaStream</tt> specified by <tt>propertyName</tt> to be set
      */
     void setProperty(String propertyName, Object value);
-
-    /**
-     * Sets the <tt>SSRCFactory</tt> which is to generate new synchronization
-     * source (SSRC) identifiers.
-     * 
-     * @param ssrcFactory the <tt>SSRCFactory</tt> which is to generate new
-     * synchronization source (SSRC) identifiers or <tt>null</tt> if this
-     * <tt>MediaStream</tt> is to employ internal logic to generate new
-     * synchronization source (SSRC) identifiers
-     */
-    void setSSRCFactory(SSRCFactory ssrcFactory);
 
     /**
      * Starts capturing media from this stream's <tt>MediaDevice</tt> and then
@@ -370,7 +338,9 @@ public interface MediaStream
      */
     void clearDynamicRTPPayloadTypes();
 
-    public boolean writePacket(RawPacket pkt, MediaStream source, boolean needToCopy);
-    public PacketSwitch getPacketSwitch();
-    public DatagramSocket getSocket();
+    boolean writePacket(RawPacket pkt, MediaStream source, boolean needToCopy);
+    PacketSwitch getPacketSwitch();
+    DatagramSocket getSocket();
+    void setSocket(DatagramSocket socket);
+    void setLocalSSRC(long ssrc);
 }

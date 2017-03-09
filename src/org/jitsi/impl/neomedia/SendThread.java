@@ -102,4 +102,9 @@ public class SendThread
             logger.warn("failed to send: "+ioe);
         }
     }
+
+    void close()
+    {
+        queue.close();
+    }
 }

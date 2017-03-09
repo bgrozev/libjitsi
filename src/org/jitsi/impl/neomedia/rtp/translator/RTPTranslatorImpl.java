@@ -543,18 +543,6 @@ public class RTPTranslatorImpl
 
         if (data)
         {
-            // Ignore RTP packets coming from peers whose MediaStream's
-            // direction does not allow receiving.
-            if (!streamRTPManager.streamRTPManager.getMediaStream()
-                    .getDirection().allowsReceiving())
-            {
-                // FIXME We are ignoring RTP packets received from peers who we
-                // do not want to receive from ONLY in the sense that we are not
-                // translating/forwarding them to the other peers. Do not we
-                // want to not receive them locally as well?
-                return len;
-            }
-
             // We flag an RTP packet with Buffer.FLAG_SILENCE when we want to
             // ignore its payload. Because the payload may have skipped
             // decryption as a result of the flag, it is unwise to

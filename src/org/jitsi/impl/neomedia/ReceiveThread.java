@@ -104,4 +104,9 @@ public class ReceiveThread
             // write to PacketSwitch
         }
     }
+
+    void close()
+    {
+        closed = true;
+    }
 }

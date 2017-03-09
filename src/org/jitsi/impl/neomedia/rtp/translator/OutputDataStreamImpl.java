@@ -600,14 +600,6 @@ class OutputDataStreamImpl
             Format format,
             StreamRTPManagerDesc exclusion)
     {
-        // Only write data packets to OutputDataStreams for which the
-        // associated MediaStream allows sending.
-        if (!destination.streamRTPManager.getMediaStream().getDirection()
-                .allowsSending())
-        {
-            return false;
-        }
-
         if (format != null && len > 0)
         {
             Integer pt = destination.getPayloadType(format);

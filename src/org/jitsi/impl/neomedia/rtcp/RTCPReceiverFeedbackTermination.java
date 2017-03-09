@@ -143,24 +143,9 @@ public class RTCPReceiverFeedbackTermination
         }
     }
 
-    /**
-     * (attempts) to get the local SSRC that will be used in the media sender
-     * SSRC field of the RTCP reports. TAG(cat4-local-ssrc-hurricane)
-     *
-     * @return
-     */
     private long getSenderSSRC()
     {
-        /* FFFF why the fuck do we continue to introduce these dependencies?
-        StreamRTPManager streamRTPManager = stream.getStreamRTPManager();
-        if (streamRTPManager == null)
-        {
-            return -1;
-        }
-
-        return stream.getStreamRTPManager().getLocalSSRC();
-        */
-        return stream.getLocalSourceID();
+        return stream.getLocalSSRC();
     }
 
 

@@ -122,9 +122,9 @@ public class VideoMediaStreamImpl
      * @param srtpControl a control which is already created, used to control
      * the srtp operations.
      */
-    public VideoMediaStreamImpl(SrtpControl srtpControl, DatagramSocket socket)
+    public VideoMediaStreamImpl(SrtpControl srtpControl, PacketSwitch packetSwitch)
     {
-        super(srtpControl, MediaType.VIDEO, null, socket);
+        super(srtpControl, MediaType.VIDEO, packetSwitch);
 
         // Register the RemoteBitrateEstimator with the
         // RecurringRunnableExecutor.
