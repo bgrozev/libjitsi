@@ -102,8 +102,11 @@ public class ReceiveThread
             array[0] = rawPacket;
             for (RawPacket pkt : packetTransformer.reverseTransform(array))
             {
-                pkt.setMediaStream(mediaStream);
-                packetSwitch.addPacket(pkt);
+                if (pkt != null)
+                {
+                    pkt.setMediaStream(mediaStream);
+                    packetSwitch.addPacket(pkt);
+                }
             }
 
             // write to PacketSwitch
