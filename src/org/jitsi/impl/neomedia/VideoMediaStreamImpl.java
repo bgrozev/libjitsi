@@ -58,6 +58,19 @@ public class VideoMediaStreamImpl
     extends MediaStreamImpl
     implements VideoMediaStream
 {
+    @Override
+    public byte getDynamicRTPPayloadType(String encoding)
+    {
+        if ("vp8".equalsIgnoreCase(encoding))
+        {
+            return 100;
+        }
+        else if ("vp9".equalsIgnoreCase(encoding))
+        {
+            return 101;
+        }
+        return -1;
+    }
     /**
      * The <tt>Logger</tt> used by the <tt>VideoMediaStreamImpl</tt> class and
      * its instances for logging output.
