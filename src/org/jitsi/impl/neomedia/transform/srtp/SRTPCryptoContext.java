@@ -107,18 +107,18 @@ public class SRTPCryptoContext
      * concern to <tt>SRTPCryptoContext</tt> once during the initialization of
      * the first instance.
      */
-    private static synchronized void readConfigurationServicePropertiesOnce()
-    {
-        if (readConfigurationServicePropertiesOnce)
-            readConfigurationServicePropertiesOnce = false;
-        else
-            return;
-
-        ConfigurationService cfg = LibJitsi.getConfigurationService();
-
-        if (cfg != null)
-            checkReplay = cfg.getBoolean(CHECK_REPLAY_PNAME, checkReplay);
-    }
+//    private static synchronized void readConfigurationServicePropertiesOnce()
+//    {
+//        if (readConfigurationServicePropertiesOnce)
+//            readConfigurationServicePropertiesOnce = false;
+//        else
+//            return;
+//
+//        ConfigurationService cfg = LibJitsi.getConfigurationService();
+//
+//        if (cfg != null)
+//            checkReplay = cfg.getBoolean(CHECK_REPLAY_PNAME, checkReplay);
+//    }
 
     /**
      * For the receiver only, the rollover counter guessed from the sequence
@@ -215,20 +215,28 @@ public class SRTPCryptoContext
             SRTPPolicy policy)
     {
         super(ssrc, masterK, masterS, policy);
+        System.out.println("BRIAN: creating srtp crypto context with: \n" +
+                "sender? " + sender +
+
+                "\nroc: " + roc +
+                "\nkeyDerivationRate: " + keyDerivationRate +
+                "\nmasterK: " + toHex(masterK) +
+                "\nmasterS: " + toHex(masterS) +
+                "\npolicy: " + policy.toString());
 
         this.sender = sender;
         this.roc = roc;
         this.keyDerivationRate = keyDerivationRate;
 
-        readConfigurationServicePropertiesOnce();
+//        readConfigurationServicePropertiesOnce();
     }
 
-    /**
+    /**c
      * Authenticates a specific <tt>RawPacket</tt> if the <tt>policy</tt> of
      * this <tt>SRTPCryptoContext</tt> specifies that authentication is to be
      * performed.
      *
-     * @param pkt the <tt>RawPacket</tt> to authenticate
+     * @param pkt the <tt>RawPacket</tt> to acuthenticate
      * @return <tt>true</tt> if the <tt>policy</tt> of this
      * <tt>SRTPCryptoContext</tt> specifies that authentication is to not be
      * performed or <tt>pkt</tt> was successfully authenticated; otherwise,
@@ -743,5 +751,87 @@ public class SRTPCryptoContext
             s_l = seqNo & 0xffff;
             roc = guessedROC;
         }
+    }
+
+    private static final char[] HEX_ENCODE_TABLE
+            = {
+            '0', '1', '2', '3', '4', '5', '6', '7',
+            '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+    };
+    public static String toHex(byte[] fingerprint)
+    {
+        return toHex(fingerprint, 0, fingerprint.length);
+    }
+
+    public static String toHex(byte[] data, int off, int length)
+    {
+        try
+        {
+            char[] chars = new char[3 * length - 1];
+
+            for (int f = off, fLast = off + length - 1, c = 0;
+                 f <= fLast;
+                 f++)
+            {
+                int b = data[f] & 0xff;
+
+                chars[c++] = HEX_ENCODE_TABLE[b >>> 4];
+                chars[c++] = HEX_ENCODE_TABLE[b & 0x0f];
+            }
+            return new String(chars);
+        } catch (Exception e) {
+            System.out.println("BRIAN: exception converting to hex: " + e.toString());
+            return e.toString();
+        }
+    }
+
+    public static String toHexArrayDef(byte[] data, int off, int length)
+    {
+        try
+        {
+            char[] chars = new char[20 * length - 1];
+
+            for (int f = off, fLast = off + length - 1, c = 0;
+                 f <= fLast;
+                 f++)
+            {
+                int b = data[f] & 0xff;
+
+                chars[c++] = '(';
+                chars[c++] = 'b';
+                chars[c++] = 'y';
+                chars[c++] = 't';
+                chars[c++] = 'e';
+                chars[c++] = ')';
+                chars[c++] = '0';
+                chars[c++] = 'x';
+                chars[c++] = HEX_ENCODE_TABLE[b >>> 4];
+                chars[c++] = HEX_ENCODE_TABLE[b & 0x0f];
+                chars[c++] = ',';
+                chars[c++] = ' ';
+            }
+            return new String(chars);
+        } catch (Exception e) {
+            System.out.println("BRIAN: exception converting to hex: " + e.toString());
+            return e.toString();
+        }
+
+    }
+
+
+    @Override
+    public String toString()
+    {
+        return "" +
+                this.hashCode() +
+                " ssrc: " + ssrc +
+                " masterK: " + toHex(masterKey) +
+                " masterS: " + toHex(masterSalt) +
+                " encKey: " + toHex(encKey) +
+                " saltKey: " + toHex(saltKey) +
+                " policy: " + policy +
+                " sender? " + sender +
+                " roc: " + roc +
+                " key derivation rate: " + keyDerivationRate;
     }
 }

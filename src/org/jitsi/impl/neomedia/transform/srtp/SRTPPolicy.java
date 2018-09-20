@@ -238,4 +238,17 @@ public class SRTPPolicy
     {
         this.saltKeyLength = keyLength;
     }
+
+    @Override
+    public String toString()
+    {
+        return "" +
+                " srtp encryption type: " + encType +
+                " srtp enc key length: " + encKeyLength +
+                " srtp auth type: " + authType +
+                " srtp auth key length: " + authKeyLength +
+                " srtp auth tag length: " + authTagLength +
+                " srtp salt key length: " + saltKeyLength;
+
+    }
 }

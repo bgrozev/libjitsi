@@ -34,6 +34,11 @@
 */
 package org.jitsi.impl.neomedia.transform.srtp;
 
+import java.io.*;
+import java.nio.*;
+import java.nio.channels.*;
+import java.nio.file.*;
+import java.nio.file.attribute.*;
 import java.util.*;
 
 import org.jitsi.impl.neomedia.transform.*;
@@ -72,6 +77,11 @@ public class SRTPTransformer
         this(factory, factory);
     }
 
+    String filePath = "/tmp/lj_" + System.currentTimeMillis() + ".rtpdump";
+    Path path = Paths.get(filePath);
+    FileChannel fileWriter;
+    ByteBuffer intBuffer = ByteBuffer.allocate(4);
+
     /**
      * Constructs a SRTPTransformer object.
      *
@@ -87,6 +97,21 @@ public class SRTPTransformer
         this.forwardFactory = forwardFactory;
         this.reverseFactory = reverseFactory;
         this.contexts = new HashMap<Integer,SRTPCryptoContext>();
+
+//        try
+//        {
+//            Files.createFile(path);
+//            Set perms = Files.readAttributes(path, PosixFileAttributes.class).permissions();
+//            perms.add(PosixFilePermission.GROUP_WRITE);
+//            perms.add(PosixFilePermission.OTHERS_WRITE);
+//            Files.setPosixFilePermissions(path, perms);
+//            FileOutputStream fos = new FileOutputStream(path.toFile());
+//            fileWriter = fos.getChannel();
+//        } catch (IOException e)
+//        {
+//            System.out.println("BRIAN: error creating packet dump file: " + e.toString());
+//            e.printStackTrace();
+//        }
     }
 
     /**
@@ -164,6 +189,9 @@ public class SRTPTransformer
                 context = engine.getDefaultContext();
                 if (context != null)
                 {
+                    System.out.println("BRIAN: deriving new context from factory " +
+                            engine.hashCode() + " with ssrc " + ssrc + " and index " +
+                            deriveSrtpKeysIndex);
                     context = context.deriveContext(ssrc, 0, 0);
                     context.deriveSrtpKeys(deriveSrtpKeysIndex);
                     contexts.put(ssrc, context);
@@ -184,6 +212,10 @@ public class SRTPTransformer
     @Override
     public RawPacket reverseTransform(RawPacket pkt)
     {
+//        System.out.println("BRIAN: packet " + pkt.getSSRCAsLong() + " " +
+//                pkt.getSequenceNumber() + " (length: " + pkt.getLength() + " before decrypt: " +
+//                SRTPCryptoContext.toHexArrayDef(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()) +
+//                "\n will get context from factory " + reverseFactory.hashCode());
         // only accept RTP version 2 (SNOM phones send weird packages when on
         // hold, ignore them with this check (RTP Version must be equal to 2)
         if((pkt.readByte(0) & 0xC0) != 0x80)
@@ -195,10 +227,27 @@ public class SRTPTransformer
                     reverseFactory,
                     pkt.getSequenceNumber());
 
-        return
+        RawPacket res =
             ((context != null) && context.reverseTransformPacket(pkt))
                 ? pkt
                 : null;
+//        System.out.println("BRIAN: packet " + pkt.getSSRCAsLong() + " " +
+//                pkt.getSequenceNumber() + " (length: " + pkt.getLength() + " after decrypt: " +
+//                SRTPCryptoContext.toHexArrayDef(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()));
+//        if (res != null && res.getPayloadType() == 100) {
+//            intBuffer.putInt(0, res.getLength());
+//            try
+//            {
+//                fileWriter.write(intBuffer);
+//                fileWriter.write(ByteBuffer.wrap(res.getBuffer(), 0, res.getLength()));
+//
+//                intBuffer.rewind();
+//            } catch (IOException e)
+//            {
+//                e.printStackTrace();
+//            }
+//        }
+        return res;
     }
 
     /**

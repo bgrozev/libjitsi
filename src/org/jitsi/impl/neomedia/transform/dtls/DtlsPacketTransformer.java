@@ -31,6 +31,9 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 
+import static org.jitsi.impl.neomedia.transform.srtp.SRTPCryptoContext.toHex;
+import static org.jitsi.impl.neomedia.transform.srtp.SRTPCryptoContext.toHexArrayDef;
+
 /**
  * Implements {@link PacketTransformer} for DTLS-SRTP. It's capable of working
  * in pure DTLS mode if appropriate flag was set in <tt>DtlsControlImpl</tt>.
@@ -599,6 +602,7 @@ public class DtlsPacketTransformer
         int auth_key_length;
         int RTCP_auth_tag_length, RTP_auth_tag_length;
 
+        System.out.println("BRIAN: srtp protection profile: " + srtpProtectionProfile);
         switch (srtpProtectionProfile)
         {
         case SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_32:
@@ -639,11 +643,13 @@ public class DtlsPacketTransformer
             throw new IllegalArgumentException("srtpProtectionProfile");
         }
 
+        System.out.println("BRIAN: master secret: " + tlsContext.getSecurityParameters().getMasterSecret());
         byte[] keyingMaterial
             = tlsContext.exportKeyingMaterial(
                     ExporterLabel.dtls_srtp,
                     null,
                     2 * (cipher_key_length + cipher_salt_length));
+        System.out.println("BRIAN: creating srtp factories. \nkeying material: " + toHexArrayDef(keyingMaterial, 0, keyingMaterial.length));
         byte[] client_write_SRTP_master_key = new byte[cipher_key_length];
         byte[] server_write_SRTP_master_key = new byte[cipher_key_length];
         byte[] client_write_SRTP_master_salt = new byte[cipher_salt_length];
@@ -692,6 +698,12 @@ public class DtlsPacketTransformer
                     client_write_SRTP_master_salt,
                     srtpPolicy,
                     srtcpPolicy);
+        System.out.println("BRIAN: created client srtp factory " + clientSRTPContextFactory.hashCode() + " with values: " +
+                "\nsender? " + (tlsContext instanceof TlsClientContext) +
+                "\nclient write srtp master key: " + toHex(client_write_SRTP_master_key) +
+                "\nclient write srtp master salt: " + toHex(client_write_SRTP_master_salt) +
+                "\nsrtp policy: " + srtpPolicy.toString() +
+                "\nsrtcp policy: " + srtcpPolicy.toString());
         SRTPContextFactory serverSRTPContextFactory
             = new SRTPContextFactory(
                     /* sender */ tlsContext instanceof TlsServerContext,
@@ -699,16 +711,24 @@ public class DtlsPacketTransformer
                     server_write_SRTP_master_salt,
                     srtpPolicy,
                     srtcpPolicy);
+        System.out.println("BRIAN: created server srtp factory " + serverSRTPContextFactory.hashCode() + " with values: " +
+                "\nsender? " + (tlsContext instanceof TlsServerContext) +
+                "\nserver write srtp master key: " + toHex(server_write_SRTP_master_key) +
+                "\nserver write srtp master salt: " + toHex(server_write_SRTP_master_salt) +
+                "\nsrtp policy: " + srtpPolicy.toString() +
+                "\nsrtcp policy: " + srtcpPolicy.toString());
         SRTPContextFactory forwardSRTPContextFactory;
         SRTPContextFactory reverseSRTPContextFactory;
 
         if (tlsContext instanceof TlsClientContext)
         {
+            System.out.println("BRIAN: this was tls client, reverse factory will use server");
             forwardSRTPContextFactory = clientSRTPContextFactory;
             reverseSRTPContextFactory = serverSRTPContextFactory;
         }
         else if (tlsContext instanceof TlsServerContext)
         {
+            System.out.println("BRIAN: this was tls server, reverse factory will use client");
             forwardSRTPContextFactory = serverSRTPContextFactory;
             reverseSRTPContextFactory = clientSRTPContextFactory;
         }

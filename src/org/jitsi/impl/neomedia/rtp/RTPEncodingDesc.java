@@ -373,7 +373,7 @@ public class RTPEncodingDesc
      * @param pkt
      * @param nowMs
      */
-    void update(RawPacket pkt, long nowMs)
+    public void update(RawPacket pkt, long nowMs)
     {
         // Update rate stats (this should run after padding termination).
         rateStatistics.update(pkt.getLength(), nowMs);

@@ -25,7 +25,7 @@ import org.bouncycastle.crypto.tls.*;
  *
  * @author Lyubomir Marinov
  */
-class CertificateInfo
+public class CertificateInfo
 {
     /**
      * The certificate with which the local endpoint represented by this
