@@ -24,7 +24,7 @@ import org.jetbrains.annotations.*;
  *
  * @author Lyubomir Marinov
  */
-class OveruseDetector
+public class OveruseDetector
 {
     private static final Logger logger
         = Logger.getLogger(OveruseDetector.class);

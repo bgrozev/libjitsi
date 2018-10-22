@@ -23,7 +23,7 @@ package org.jitsi.impl.neomedia.rtp.remotebitrateestimator;
  *
  * @author Lyubomir Marinov
  */
-class OverUseDetectorOptions
+public class OverUseDetectorOptions
 {
     public double initialAvgNoise = 0.0D;
 

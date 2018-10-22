@@ -175,8 +175,10 @@ public class RTCPTCCPacket
         // in the 'base sequence number' field and increments as we parse.
         int currentSeq = RTPUtils.readUint16AsInt(fciBuf, fciOff);
         int packetStatusCount = RTPUtils.readUint16AsInt(fciBuf, fciOff + 2);
+        System.out.println(packetStatusCount + " packet statuses");
 
         long referenceTime = getReferenceTime250us(fciBuffer);
+        System.out.println("Got reference time value: " + referenceTime);
 
         // The offset at which the packet status chunk list starts.
         int currentPscOff = fciOff + PACKET_STATUS_CHUNK_OFFSET;
@@ -192,10 +194,12 @@ public class RTCPTCCPacket
             }
 
             int packetsInChunk = getPacketCount(fciBuf, currentPscOff);
+            System.out.println(packetsInChunk + " packets in chunk");
             packetsRemaining -= packetsInChunk;
 
             currentPscOff += CHUNK_SIZE_BYTES;
         }
+        System.out.println("Delta offset from fci offset: " + (currentPscOff - (fciOff + PACKET_STATUS_CHUNK_OFFSET)));
 
         // At this point we have the the beginning of the delta list. Start
         // reading from the chunk and delta lists together.

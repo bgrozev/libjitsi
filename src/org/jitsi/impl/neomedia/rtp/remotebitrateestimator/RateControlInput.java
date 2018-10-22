@@ -20,7 +20,7 @@ package org.jitsi.impl.neomedia.rtp.remotebitrateestimator;
  *
  * @author Lyubomir Marinov
  */
-class RateControlInput
+public class RateControlInput
 {
     public BandwidthUsage bwState;
 

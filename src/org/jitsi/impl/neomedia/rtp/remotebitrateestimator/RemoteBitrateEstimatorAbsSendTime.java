@@ -194,12 +194,18 @@ public class RemoteBitrateEstimatorAbsSendTime
         int payloadSize,
         long ssrc)
     {
+        //TEMP pass in send time ms directly
+        long timestamp = sendTime24bits;
+        long sendTimeMs = sendTime24bits;
         // Shift up send time to use the full 32 bits that inter_arrival
         // works with, so wrapping works properly.
-        long timestamp = sendTime24bits << kAbsSendTimeInterArrivalUpshift;
+//        long timestamp = sendTime24bits << kAbsSendTimeInterArrivalUpshift;
 
         // Convert the expanded AST (32 bits, 6.26 fixed point) to millis.
-        long sendTimeMs = (long) (timestamp * kTimestampToMs);
+//        long sendTimeMs = (long) (timestamp * kTimestampToMs);
+
+        logger.info("Packet from " + ssrc + " sent at " + sendTimeMs + ", arrived at " + arrivalTimeMs +
+                " (took " + (arrivalTimeMs - sendTimeMs) + ")");
 
         // XXX The arrival time should be the earliest we've seen this packet,
         // not now. In our code however, we don't have access to the arrival

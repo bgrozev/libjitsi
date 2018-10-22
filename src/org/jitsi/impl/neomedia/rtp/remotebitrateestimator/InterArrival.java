@@ -31,7 +31,7 @@ import org.jetbrains.annotations.*;
  * @author Julian Chukwu
  * @author George Politis
  */
-class InterArrival
+public class InterArrival
 {
     private static final int kBurstDeltaThresholdMs  = 5;
 

@@ -30,7 +30,7 @@ import org.jetbrains.annotations.*;
  *
  * @author Lyubomir Marinov
  */
-class AimdRateControl
+public class AimdRateControl
 {
     /**
      * The <tt>TimeSeriesLogger</tt> used by the

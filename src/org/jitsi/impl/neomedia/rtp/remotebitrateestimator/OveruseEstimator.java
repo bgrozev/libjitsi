@@ -26,7 +26,7 @@ import java.util.*;
  *
  * @author Lyubomir Marinov
  */
-class OveruseEstimator
+public class OveruseEstimator
 {
     /**
      * The <tt>Logger</tt> used by the

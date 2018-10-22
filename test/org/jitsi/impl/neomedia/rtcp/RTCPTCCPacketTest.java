@@ -230,4 +230,87 @@ public class RTCPTCCPacketTest
         nextReferenceTime250us = nextReferenceTime250us + (17 << 2);
         assertEquals(nextReferenceTime250us, (long) after.get(1274));
     }
+
+    @Test
+    public void brian()
+    {
+        final byte[] fci = new byte[]{
+                (byte)0x15, (byte)0x60, (byte)0x00, (byte)0x0F,
+                (byte)0x14, (byte)0x36, (byte)0xBD, (byte)0x2B,
+                (byte)0x8A, (byte)0x50, (byte)0x40, (byte)0x01,
+                (byte)0xFC, (byte)0x74, (byte)0x84, (byte)0x74,
+                (byte)0x01, (byte)0x30, (byte)0x00, (byte)0x00
+        };
+        ByteArrayBufferImpl baf = new ByteArrayBufferImpl(fci);
+
+        RTCPTCCPacket.PacketMap pm = RTCPTCCPacket.getPacketsFromFci(baf, true);
+        pm.forEach((key, value) -> {
+            System.out.println(key + " -> " + value);
+
+        });
+
+    }
+
+    @Test
+    public void brian2()
+    {
+        final byte[] fci = new byte[]{
+                (byte)0x00, (byte)0x0C, (byte)0x00, (byte)0xEC,
+                (byte)0x15, (byte)0xF8, (byte)0xF7, (byte)0x00,
+                (byte)0xBF, (byte)0xFE, (byte)0xA5, (byte)0x29,
+                (byte)0x92, (byte)0x4A, (byte)0x94, (byte)0xF5,
+                (byte)0xAC, (byte)0xCE, (byte)0xB3, (byte)0x33,
+                (byte)0xAC, (byte)0xDA, (byte)0xB6, (byte)0x9B,
+                (byte)0xAD, (byte)0x73, (byte)0xA7, (byte)0x66,
+                (byte)0xB5, (byte)0xCE, (byte)0x9D, (byte)0xCE,
+                (byte)0xB6, (byte)0xED, (byte)0x8D, (byte)0xCF,
+                (byte)0x9C, (byte)0xED, (byte)0xAE, (byte)0x73,
+                (byte)0xD1, (byte)0x19, (byte)0xD4, (byte)0x50,
+                (byte)0xCC, (byte)0x00, (byte)0x00, (byte)0x04,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x04, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x04, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x04, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x04, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+                (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x04,
+                (byte)0xFF, (byte)0xFC, (byte)0x2C, (byte)0x04,
+                (byte)0x00, (byte)0x18, (byte)0x00, (byte)0x00
+        };
+        ByteArrayBufferImpl baf = new ByteArrayBufferImpl(fci);
+
+        RTCPTCCPacket.PacketMap pm = RTCPTCCPacket.getPacketsFromFci(baf, true);
+        pm.forEach((key, value) -> {
+            System.out.println(key + " -> " + value);
+
+        });
+
+    }
 }
