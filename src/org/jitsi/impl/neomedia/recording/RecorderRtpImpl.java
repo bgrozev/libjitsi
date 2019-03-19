@@ -328,6 +328,14 @@ public class RecorderRtpImpl
         }
 
         /*
+         * Register a fake call participant.
+         * TODO: can we use a more generic MediaStream here?
+         */
+        mediaStream
+            = mediaService.createMediaStream(new MediaDeviceImpl(
+                        new CaptureDeviceInfo(), MediaType.VIDEO));
+
+        /*
          * Note that we use only one RTPConnector for both the RTPTranslator
          * and the RTPManager instances. The this.translator will write to its
          * output streams, and this.rtpManager will read from its input streams.
@@ -350,13 +358,6 @@ public class RecorderRtpImpl
          */
         rtpManager.initialize(rtpConnector);
 
-        /*
-         * Register a fake call participant.
-         * TODO: can we use a more generic MediaStream here?
-         */
-        mediaStream
-            = mediaService.createMediaStream(new MediaDeviceImpl(
-                        new CaptureDeviceInfo(), MediaType.VIDEO));
         streamRTPManager = new StreamRTPManager(mediaStream, translator);
 
         streamRTPManager.initialize(rtpConnector);
@@ -1224,6 +1225,12 @@ public class RecorderRtpImpl
                             + ioe);
             return;
         }
+
+        if (dataStream == null)
+        {
+            return;
+        }
+
         for (RawPacket pkt : pkts)
             dataStream.write(pkt.getBuffer(),
                              pkt.getOffset(),

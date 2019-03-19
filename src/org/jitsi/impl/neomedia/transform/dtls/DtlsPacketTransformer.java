@@ -21,7 +21,6 @@ import java.security.*;
 import java.util.*;
 
 import org.bouncycastle.crypto.tls.*;
-import org.ice4j.ice.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
@@ -415,7 +414,7 @@ public class DtlsPacketTransformer
         if (srtpTransformer != null)
             return srtpTransformer;
 
-        if (rtcpmux && Component.RTCP == componentID)
+        if (rtcpmux && DtlsTransformEngine.COMPONENT_RTCP == componentID)
             return initializeSRTCPTransformerFromRtp();
 
         // XXX It is our explicit policy to rely on the SrtpListener to notify
@@ -585,10 +584,10 @@ public class DtlsPacketTransformer
 
         switch (componentID)
         {
-        case Component.RTCP:
+            case DtlsTransformEngine.COMPONENT_RTCP:
             rtcp = true;
             break;
-        case Component.RTP:
+        case DtlsTransformEngine.COMPONENT_RTP:
             rtcp = false;
             break;
         default:
@@ -643,13 +642,11 @@ public class DtlsPacketTransformer
             throw new IllegalArgumentException("srtpProtectionProfile");
         }
 
-        System.out.println("BRIAN: master secret: " + tlsContext.getSecurityParameters().getMasterSecret());
         byte[] keyingMaterial
             = tlsContext.exportKeyingMaterial(
                     ExporterLabel.dtls_srtp,
                     null,
                     2 * (cipher_key_length + cipher_salt_length));
-        System.out.println("BRIAN: creating srtp factories. \nkeying material: " + toHexArrayDef(keyingMaterial, 0, keyingMaterial.length));
         byte[] client_write_SRTP_master_key = new byte[cipher_key_length];
         byte[] server_write_SRTP_master_key = new byte[cipher_key_length];
         byte[] client_write_SRTP_master_salt = new byte[cipher_salt_length];
@@ -889,7 +886,7 @@ public class DtlsPacketTransformer
      */
     private void reverseTransformDtls(RawPacket pkt, List<RawPacket> outPkts)
     {
-        if (rtcpmux && Component.RTCP == componentID)
+        if (rtcpmux && DtlsTransformEngine.COMPONENT_RTCP == componentID)
         {
             // This should never happen.
             logger.warn(
@@ -1229,7 +1226,7 @@ public class DtlsPacketTransformer
             return;
         }
 
-        if (rtcpmux && Component.RTCP == componentID)
+        if (rtcpmux && DtlsTransformEngine.COMPONENT_RTCP == componentID)
         {
             // In the case of rtcp-mux, the RTCP transformer does not create
             // a DTLS session. The SRTP context (_srtpTransformer) will be
@@ -1737,5 +1734,47 @@ public class DtlsPacketTransformer
         }
 
         return true;
+    }
+
+    /* Copied from TlsContext#exportKeyingMaterial and modified to work with
+     * an externally provided masterSecret value.
+     */
+    private static byte[] exportKeyingMaterial(TlsContext context, String asciiLabel, byte[] context_value, int length, byte[] masterSecret )
+    {
+        if (context_value != null && !TlsUtils.isValidUint16(context_value.length))
+        {
+            throw new IllegalArgumentException("'context_value' must have length less than 2^16 (or be null)");
+        }
+
+        SecurityParameters sp = context.getSecurityParameters();
+        byte[] cr = sp.getClientRandom(), sr = sp.getServerRandom();
+
+        int seedLength = cr.length + sr.length;
+        if (context_value != null)
+        {
+            seedLength += (2 + context_value.length);
+        }
+
+        byte[] seed = new byte[seedLength];
+        int seedPos = 0;
+
+        System.arraycopy(cr, 0, seed, seedPos, cr.length);
+        seedPos += cr.length;
+        System.arraycopy(sr, 0, seed, seedPos, sr.length);
+        seedPos += sr.length;
+        if (context_value != null)
+        {
+            TlsUtils.writeUint16(context_value.length, seed, seedPos);
+            seedPos += 2;
+            System.arraycopy(context_value, 0, seed, seedPos, context_value.length);
+            seedPos += context_value.length;
+        }
+
+        if (seedPos != seedLength)
+        {
+            throw new IllegalStateException("error in calculation of seed for export");
+        }
+
+        return TlsUtils.PRF(context, masterSecret, asciiLabel, seed, length);
     }
 }

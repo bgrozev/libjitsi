@@ -20,7 +20,6 @@ import java.util.*;
 import java.util.concurrent.*;
 
 import org.bouncycastle.crypto.tls.*;
-import org.ice4j.ice.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.codec.video.h264.*;
 import org.jitsi.service.neomedia.*;
@@ -101,8 +100,8 @@ public class DatagramTransportImpl
     {
         switch (componentID)
         {
-        case Component.RTCP:
-        case Component.RTP:
+        case DtlsTransformEngine.COMPONENT_RTCP:
+        case DtlsTransformEngine.COMPONENT_RTP:
             this.componentID = componentID;
             break;
         default:
@@ -140,7 +139,7 @@ public class DatagramTransportImpl
      * to enter an endless loop.
      *
      * @param cause the <tt>Throwable</tt> which would have been thrown if the
-     * bug did not exist 
+     * bug did not exist
      */
     private void breakOutOfDTLSReliableHandshakeReceiveMessage(Throwable cause)
     {
@@ -177,10 +176,10 @@ public class DatagramTransportImpl
 
         switch (componentID)
         {
-        case Component.RTCP:
+        case DtlsTransformEngine.COMPONENT_RTCP:
             outputStream = connector.getControlOutputStream();
             break;
-        case Component.RTP:
+        case DtlsTransformEngine.COMPONENT_RTP:
             outputStream = connector.getDataOutputStream();
             break;
         default:
@@ -194,7 +193,10 @@ public class DatagramTransportImpl
         // Write synchronously in order to avoid our packet getting stuck in the
         // write queue (in case it is blocked waiting for DTLS to finish, for
         // example).
-        outputStream.syncWrite(buf, off, len);
+        if (outputStream != null)
+        {
+            outputStream.syncWrite(buf, off, len);
+        }
     }
 
     private void flush()
@@ -386,7 +388,7 @@ public class DatagramTransportImpl
                      * datagram. If the received bytes do not represent a DTLS
                      * record, the record layer may still not retransmit the
                      * outbound flight. But that should not be much of a concern
-                     * because we queue DTLS records into DatagramTransportImpl.  
+                     * because we queue DTLS records into DatagramTransportImpl.
                      */
                     if (received < 0)
                         received = 0;
@@ -580,7 +582,7 @@ public class DatagramTransportImpl
     /**
      * Sets the <tt>RTPConnector</tt> which represents and implements the actual
      * <tt>DatagramSocket</tt> to be adapted by this instance.
-     * 
+     *
      * @param connector the <tt>RTPConnector</tt> which represents and
      * implements the actual <tt>DatagramSocket</tt> to be adapted by this
      * instance
